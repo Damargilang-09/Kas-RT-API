@@ -156,7 +156,7 @@ model User {
   role         UserRole   @default(WARGA)
   houseNumber  String?    @map("house_number") @db.VarChar(50)
   address      String?    @db.Text
-  status       UserStatus @default(ACTIVE)
+  status       UserStatus @default(INACTIVE)
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
