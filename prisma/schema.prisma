@@ -5,17 +5,16 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 // ==========================================
-// ENUMS (Sudah bagus sekali, tidak ada perubahan)
+// ENUMS
 // ==========================================
 
 enum UserRole {
@@ -157,10 +156,11 @@ model User {
   role         UserRole   @default(WARGA)
   houseNumber  String?    @map("house_number") @db.VarChar(50)
   address      String?    @db.Text
-  status       UserStatus @default(INACTIVE)
+  status       UserStatus @default(ACTIVE)
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
 
   // Relations
   feeTypes          FeeType[]
@@ -171,7 +171,7 @@ model User {
   approvedExpenses  Expense[]        @relation("ExpenseApprovedBy")
   mailerLogs        MailerLog[]
   auditLogs         AuditLog[]
-  attachments       Attachment[]     // Berhasil terhubung karena perbaikan di model Attachment
+  attachments       Attachment[]
 
   @@map("users")
 }
@@ -189,8 +189,9 @@ model FeeType {
   effectiveStartDate DateTime?     @map("effective_start_date") @db.Date
   status             FeeTypeStatus @default(ACTIVE)
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
 
   bills Bill[]
 
@@ -212,12 +213,14 @@ model Bill {
   status      BillStatus @default(UNPAID)
   paidAt      DateTime?  @map("paid_at") @db.Timestamp(3)
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
 
   paymentAttempts PaymentAttempt[]
   payments        Payment[]
 
+  @@unique([feeTypeId, userId, periodMonth, periodYear])
   @@map("bills")
 }
 
@@ -285,9 +288,9 @@ model PaymentWebhookLog {
 }
 
 model Expense {
-  id            String @id @default(uuid()) @db.Uuid
-  requestedById String @map("requested_by") @db.Uuid
-  requestedBy   User   @relation("ExpenseRequestedBy", fields: [requestedById], references: [id])
+  id            String  @id @default(uuid()) @db.Uuid
+  requestedById String  @map("requested_by") @db.Uuid
+  requestedBy   User    @relation("ExpenseRequestedBy", fields: [requestedById], references: [id])
   approvedById  String? @map("approved_by") @db.Uuid
   approvedBy    User?   @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
 
@@ -300,8 +303,9 @@ model Expense {
   approvedAt     DateTime?     @map("approved_at") @db.Timestamp(3)
   rejectedReason String?       @map("rejected_reason") @db.Text
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
 
   @@map("expenses")
 }
@@ -324,19 +328,18 @@ model CashTransaction {
 }
 
 model CashSummary {
-  id             String    @id @default(uuid()) @db.Uuid
-  periodMonth    Int       @map("period_month")
-  periodYear     Int       @map("period_year")
-  openingBalance Decimal   @default(0) @map("opening_balance") @db.Decimal(15, 2)
-  totalIncome    Decimal   @default(0) @map("total_income") @db.Decimal(15, 2)
-  totalExpense   Decimal   @default(0) @map("total_expense") @db.Decimal(15, 2)
-  closingBalance Decimal   @default(0) @map("closing_balance") @db.Decimal(15, 2)
+  id               String    @id @default(uuid()) @db.Uuid
+  periodMonth      Int       @map("period_month")
+  periodYear       Int       @map("period_year")
+  openingBalance   Decimal   @default(0) @map("opening_balance") @db.Decimal(15, 2)
+  totalIncome      Decimal   @default(0) @map("total_income") @db.Decimal(15, 2)
+  totalExpense     Decimal   @default(0) @map("total_expense") @db.Decimal(15, 2)
+  closingBalance   Decimal   @default(0) @map("closing_balance") @db.Decimal(15, 2)
   lastCalculatedAt DateTime? @map("last_calculated_at") @db.Timestamp(3)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
 
-  // PERBAIKAN: Mengubah @unique satuan menjadi gabungan multi-kolom
   @@unique([periodMonth, periodYear])
   @@map("cash_summaries")
 }
@@ -383,7 +386,6 @@ model AuditLog {
 model Attachment {
   id           String @id @default(uuid()) @db.Uuid
   uploadedById String @map("uploaded_by") @db.Uuid
-  // PERBAIKAN: Ditambahkan mapping relasi eksplisit ke model User
   uploadedBy   User   @relation(fields: [uploadedById], references: [id])
 
   referenceType AttachmentReferenceType @map("reference_type")
@@ -393,8 +395,8 @@ model Attachment {
   fileType      String?                 @map("file_type") @db.VarChar(100)
   fileSize      Int?                    @map("file_size")
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
 
   @@map("attachments")
 }
-
