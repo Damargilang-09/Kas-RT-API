@@ -1,3 +1,5 @@
+import type { Request } from "express";
+
 export type RegisterRequest = {
   name: string;
   email: string;
@@ -17,6 +19,6 @@ export type JwtPayload = {
   role: "ADMIN" | "BENDAHARA" | "WARGA";
 };
 
-export type CreateUserData = Omit<RegisterRequest, "password"> & {
-  passwordHash: string;
+export type AuthenticatedRequest = Request & {
+  user?: JwtPayload;
 };

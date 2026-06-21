@@ -1,0 +1,402 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  ADMIN     @map("admin")
+  BENDAHARA @map("bendahara")
+  WARGA     @map("warga")
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE   @map("active")
+  INACTIVE @map("inactive")
+
+  @@map("user_status")
+}
+
+enum BillingPeriod {
+  MONTHLY @map("monthly")
+  WEEKLY  @map("weekly")
+  ONCE    @map("once")
+
+  @@map("billing_period")
+}
+
+enum FeeTypeStatus {
+  DRAFT    @map("draft")
+  ACTIVE   @map("active")
+  INACTIVE @map("inactive")
+
+  @@map("fee_type_status")
+}
+
+enum BillStatus {
+  UNPAID    @map("unpaid")
+  PENDING   @map("pending")
+  PAID      @map("paid")
+  OVERDUE   @map("overdue")
+  CANCELLED @map("cancelled")
+
+  @@map("bill_status")
+}
+
+enum PaymentAttemptStatus {
+  PENDING @map("pending")
+  SUCCESS @map("success")
+  FAILED  @map("failed")
+  EXPIRED @map("expired")
+
+  @@map("payment_attempt_status")
+}
+
+enum PaymentStatus {
+  SUCCESS   @map("success")
+  REFUNDED  @map("refunded")
+  CANCELLED @map("cancelled")
+
+  @@map("payment_status")
+}
+
+enum WebhookProcessedStatus {
+  SUCCESS @map("success")
+  FAILED  @map("failed")
+  IGNORED @map("ignored")
+
+  @@map("webhook_processed_status")
+}
+
+enum ExpenseStatus {
+  SUBMITTED @map("submitted")
+  APPROVED  @map("approved")
+  REJECTED  @map("rejected")
+  CANCELLED @map("cancelled")
+
+  @@map("expense_status")
+}
+
+enum CashSourceType {
+  PAYMENT @map("payment")
+  EXPENSE @map("expense")
+
+  @@map("cash_source_type")
+}
+
+enum CashTransactionType {
+  INCOME  @map("income")
+  EXPENSE @map("expense")
+
+  @@map("cash_transaction_type")
+}
+
+enum MailerLogType {
+  BILL_CREATED      @map("bill_created")
+  PAYMENT_SUCCESS   @map("payment_success")
+  PAYMENT_FAILED    @map("payment_failed")
+  EXPENSE_SUBMITTED @map("expense_submitted")
+  EXPENSE_APPROVED  @map("expense_approved")
+  EXPENSE_REJECTED  @map("expense_rejected")
+  REMINDER          @map("reminder")
+  SYSTEM            @map("system")
+
+  @@map("mailer_log_type")
+}
+
+enum MailerReferenceType {
+  BILL    @map("bill")
+  PAYMENT @map("payment")
+  EXPENSE @map("expense")
+  SYSTEM  @map("system")
+
+  @@map("mailer_reference_type")
+}
+
+enum MailerStatus {
+  PENDING @map("pending")
+  SENT    @map("sent")
+  FAILED  @map("failed")
+
+  @@map("mailer_status")
+}
+
+enum AttachmentReferenceType {
+  EXPENSE @map("expense")
+  PAYMENT @map("payment")
+  BILL    @map("bill")
+
+  @@map("attachment_reference_type")
+}
+
+// ==========================================
+// MODELS
+// ==========================================
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  name         String     @db.VarChar(150)
+  email        String     @unique @db.VarChar(150)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  role         UserRole   @default(WARGA)
+  houseNumber  String?    @map("house_number") @db.VarChar(50)
+  address      String?    @db.Text
+  status       UserStatus @default(INACTIVE)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
+
+  // Relations
+  feeTypes          FeeType[]
+  bills             Bill[]
+  paymentAttempts   PaymentAttempt[]
+  payments          Payment[]
+  requestedExpenses Expense[]        @relation("ExpenseRequestedBy")
+  approvedExpenses  Expense[]        @relation("ExpenseApprovedBy")
+  mailerLogs        MailerLog[]
+  auditLogs         AuditLog[]
+  attachments       Attachment[]
+
+  @@map("users")
+}
+
+model FeeType {
+  id          String @id @default(uuid()) @db.Uuid
+  createdById String @map("created_by") @db.Uuid
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  name               String        @db.VarChar(150)
+  description        String?       @db.Text
+  amount             Decimal       @default(0) @db.Decimal(15, 2)
+  billingPeriod      BillingPeriod @default(ONCE) @map("billing_period")
+  dueDay             Int?          @map("due_day")
+  effectiveStartDate DateTime?     @map("effective_start_date") @db.Date
+  status             FeeTypeStatus @default(ACTIVE)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
+
+  bills Bill[]
+
+  @@map("fee_types")
+}
+
+model Bill {
+  id        String  @id @default(uuid()) @db.Uuid
+  feeTypeId String  @map("fee_type_id") @db.Uuid
+  feeType   FeeType @relation(fields: [feeTypeId], references: [id])
+  userId    String  @map("user_id") @db.Uuid
+  user      User    @relation(fields: [userId], references: [id])
+
+  billCode    String     @unique @map("bill_code") @db.VarChar(100)
+  amount      Decimal    @default(0) @db.Decimal(15, 2)
+  periodMonth Int?       @map("period_month")
+  periodYear  Int?       @map("period_year")
+  dueDate     DateTime   @map("due_date") @db.Date
+  status      BillStatus @default(UNPAID)
+  paidAt      DateTime?  @map("paid_at") @db.Timestamp(3)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
+
+  paymentAttempts PaymentAttempt[]
+  payments        Payment[]
+
+  @@unique([feeTypeId, userId, periodMonth, periodYear])
+  @@map("bills")
+}
+
+model PaymentAttempt {
+  id     String @id @default(uuid()) @db.Uuid
+  billId String @map("bill_id") @db.Uuid
+  bill   Bill   @relation(fields: [billId], references: [id])
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  paymentGateway    String               @map("payment_gateway") @db.VarChar(100)
+  paymentMethod     String?              @map("payment_method") @db.VarChar(100)
+  externalReference String?              @unique @map("external_reference") @db.VarChar(150)
+  amount            Decimal              @default(0) @db.Decimal(15, 2)
+  paymentUrl        String?              @map("payment_url") @db.Text
+  status            PaymentAttemptStatus @default(PENDING)
+  expiredAt         DateTime?            @map("expired_at") @db.Timestamp(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+
+  payments    Payment[]
+  webhookLogs PaymentWebhookLog[]
+
+  @@map("payment_attempts")
+}
+
+model Payment {
+  id               String         @id @default(uuid()) @db.Uuid
+  billId           String         @map("bill_id") @db.Uuid
+  bill             Bill           @relation(fields: [billId], references: [id])
+  paymentAttemptId String         @unique @map("payment_attempt_id") @db.Uuid
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  userId           String         @map("user_id") @db.Uuid
+  user             User           @relation(fields: [userId], references: [id])
+
+  paymentCode   String        @unique @map("payment_code") @db.VarChar(100)
+  amount        Decimal       @default(0) @db.Decimal(15, 2)
+  paymentMethod String?       @map("payment_method") @db.VarChar(100)
+  paidAt        DateTime      @map("paid_at") @db.Timestamp(3)
+  status        PaymentStatus @default(SUCCESS)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+
+  @@map("payments")
+}
+
+model PaymentWebhookLog {
+  id               String          @id @default(uuid()) @db.Uuid
+  paymentAttemptId String?         @map("payment_attempt_id") @db.Uuid
+  paymentAttempt   PaymentAttempt? @relation(fields: [paymentAttemptId], references: [id])
+
+  gatewayName       String                 @map("gateway_name") @db.VarChar(100)
+  externalReference String?                @map("external_reference") @db.VarChar(150)
+  eventType         String?                @map("event_type") @db.VarChar(100)
+  payload           Json
+  statusReceived    String?                @map("status_received") @db.VarChar(100)
+  processedStatus   WebhookProcessedStatus @map("processed_status")
+
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamp(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+
+  @@map("payment_webhook_logs")
+}
+
+model Expense {
+  id            String  @id @default(uuid()) @db.Uuid
+  requestedById String  @map("requested_by") @db.Uuid
+  requestedBy   User    @relation("ExpenseRequestedBy", fields: [requestedById], references: [id])
+  approvedById  String? @map("approved_by") @db.Uuid
+  approvedBy    User?   @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+
+  expenseCode    String        @unique @map("expense_code") @db.VarChar(100)
+  title          String        @db.VarChar(200)
+  description    String?       @db.Text
+  amount         Decimal       @default(0) @db.Decimal(15, 2)
+  expenseDate    DateTime      @map("expense_date") @db.Date
+  status         ExpenseStatus @default(SUBMITTED)
+  approvedAt     DateTime?     @map("approved_at") @db.Timestamp(3)
+  rejectedReason String?       @map("rejected_reason") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
+
+  @@map("expenses")
+}
+
+model CashTransaction {
+  id String @id @default(uuid()) @db.Uuid
+
+  transactionCode String              @unique @map("transaction_code") @db.VarChar(100)
+  sourceType      CashSourceType      @map("source_type")
+  sourceId        String              @map("source_id") @db.Uuid
+  type            CashTransactionType
+  amount          Decimal             @default(0) @db.Decimal(15, 2)
+  description     String?             @db.Text
+  transactionDate DateTime            @map("transaction_date") @db.Date
+  createdBySystem Boolean             @default(true) @map("created_by_system")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+
+  @@map("cash_transactions")
+}
+
+model CashSummary {
+  id               String    @id @default(uuid()) @db.Uuid
+  periodMonth      Int       @map("period_month")
+  periodYear       Int       @map("period_year")
+  openingBalance   Decimal   @default(0) @map("opening_balance") @db.Decimal(15, 2)
+  totalIncome      Decimal   @default(0) @map("total_income") @db.Decimal(15, 2)
+  totalExpense     Decimal   @default(0) @map("total_expense") @db.Decimal(15, 2)
+  closingBalance   Decimal   @default(0) @map("closing_balance") @db.Decimal(15, 2)
+  lastCalculatedAt DateTime? @map("last_calculated_at") @db.Timestamp(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+
+  @@unique([periodMonth, periodYear])
+  @@map("cash_summaries")
+}
+
+model MailerLog {
+  id     String  @id @default(uuid()) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id])
+
+  emailTo       String               @map("email_to") @db.VarChar(150)
+  subject       String               @db.VarChar(255)
+  body          String               @db.Text
+  type          MailerLogType
+  referenceType MailerReferenceType? @map("reference_type")
+  referenceId   String?              @map("reference_id") @db.Uuid
+  status        MailerStatus         @default(PENDING)
+  sentAt        DateTime?            @map("sent_at") @db.Timestamp(3)
+  errorMessage  String?              @map("error_message") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
+
+  @@map("mailer_logs")
+}
+
+model AuditLog {
+  id     String  @id @default(uuid()) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id])
+
+  action    String  @db.VarChar(100)
+  tableName String  @map("table_name") @db.VarChar(100)
+  recordId  String? @map("record_id") @db.Uuid
+  oldValue  Json?   @map("old_value")
+  newValue  Json?   @map("new_value")
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+
+  @@map("audit_logs")
+}
+
+model Attachment {
+  id           String @id @default(uuid()) @db.Uuid
+  uploadedById String @map("uploaded_by") @db.Uuid
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  referenceType AttachmentReferenceType @map("reference_type")
+  referenceId   String                  @map("reference_id") @db.Uuid
+  fileName      String                  @map("file_name") @db.VarChar(255)
+  filePath      String                  @map("file_path") @db.Text
+  fileType      String?                 @map("file_type") @db.VarChar(100)
+  fileSize      Int?                    @map("file_size")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(3)
+
+  @@map("attachments")
+}
