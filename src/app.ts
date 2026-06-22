@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
-import 'dotenv/config'
-import { errorHandler } from "./middlewares/error-handler.midleware";
+import "dotenv/config";
+import { errorHandler } from "./middlewares/error-handler.middleware";
 import routes from "./routes";
 
 const PORT = process.env.PORT || 8001;
