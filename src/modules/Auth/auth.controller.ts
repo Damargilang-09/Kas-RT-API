@@ -1,7 +1,6 @@
-import { Response } from "express";
-import { StatusCodes } from "http-status-codes";
+import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
-import type { AuthenticatedRequest } from "./auth.types";
+import { StatusCodes } from 'http-status-codes';
 
 export const AuthController = {
   async register(req: AuthenticatedRequest, res: Response) {
