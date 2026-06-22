@@ -37,20 +37,26 @@ export const AuthService = {
   async login({ email, password }: LoginRequest) {
     const user = await AuthRepository.findUserByEmail(email);
 
-    if (!user) {
-      throw new AppError(StatusCodes.UNAUTHORIZED, "Email atau password salah");
+    if (!user || user.deletedAt) {
+      throw new AppError(
+        StatusCodes.UNAUTHORIZED,
+        "Email atau password salah"
+      );
     }
 
     const isPasswordValid = await comparePassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
-      throw new AppError(StatusCodes.UNAUTHORIZED, "Email atau password salah");
+      throw new AppError(
+        StatusCodes.UNAUTHORIZED,
+        "Email atau password salah"
+      );
     }
 
     if (user.status !== "ACTIVE") {
       throw new AppError(
         StatusCodes.FORBIDDEN,
-        "Akun Anda belum aktif. Silakan tunggu verifikasi admin.",
+        "Akun Anda belum aktif. Silakan tunggu verifikasi admin."
       );
     }
 

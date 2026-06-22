@@ -17,7 +17,7 @@ export const AuthController = {
 
     res.status(StatusCodes.CREATED).json({
       success: true,
-      message: "Akun anda telah terdaftar. Mohon tunggu verifikasi dari admin.",
+      message: "Akun telah terdaftar. Mohon tunggu verifikasi dari admin.",
       data: registeredUser,
     });
   },
