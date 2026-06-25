@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
@@ -77,9 +77,10 @@ enum PaymentStatus {
 }
 
 enum WebhookProcessedStatus {
-  SUCCESS @map("success")
-  FAILED  @map("failed")
-  IGNORED @map("ignored")
+  SUCCESS   @map("success")
+  FAILED    @map("failed")
+  IGNORED   @map("ignored")
+  DUPLICATE @map("duplicate")
 
   @@map("webhook_processed_status")
 }
@@ -171,7 +172,7 @@ model User {
   approvedExpenses  Expense[]        @relation("ExpenseApprovedBy")
   mailerLogs        MailerLog[]
   auditLogs         AuditLog[]
-  attachments       Attachment[]     // Berhasil terhubung karena perbaikan di model Attachment
+  attachments       Attachment[] // Berhasil terhubung karena perbaikan di model Attachment
 
   @@map("users")
 }
@@ -218,6 +219,12 @@ model Bill {
   paymentAttempts PaymentAttempt[]
   payments        Payment[]
 
+  @@unique([feeTypeId, userId, periodMonth, periodYear])
+  @@index([userId])
+  @@index([feeTypeId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([periodYear, periodMonth])
   @@map("bills")
 }
 
@@ -228,6 +235,7 @@ model PaymentAttempt {
   userId String @map("user_id") @db.Uuid
   user   User   @relation(fields: [userId], references: [id])
 
+  idempotencyKey    String               @unique @map("idempotency_key") @db.VarChar(150)
   paymentGateway    String               @map("payment_gateway") @db.VarChar(100)
   paymentMethod     String?              @map("payment_method") @db.VarChar(100)
   externalReference String?              @unique @map("external_reference") @db.VarChar(150)
@@ -242,6 +250,9 @@ model PaymentAttempt {
   payments    Payment[]
   webhookLogs PaymentWebhookLog[]
 
+  @@index([billId])
+  @@index([userId])
+  @@index([status])
   @@map("payment_attempts")
 }
 
@@ -263,6 +274,11 @@ model Payment {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
 
+  cashTransactions CashTransaction[]
+
+  @@index([billId])
+  @@index([userId])
+  @@index([paidAt])
   @@map("payments")
 }
 
@@ -271,23 +287,30 @@ model PaymentWebhookLog {
   paymentAttemptId String?         @map("payment_attempt_id") @db.Uuid
   paymentAttempt   PaymentAttempt? @relation(fields: [paymentAttemptId], references: [id])
 
-  gatewayName       String                 @map("gateway_name") @db.VarChar(100)
-  externalReference String?                @map("external_reference") @db.VarChar(150)
-  eventType         String?                @map("event_type") @db.VarChar(100)
-  payload           Json
-  statusReceived    String?                @map("status_received") @db.VarChar(100)
-  processedStatus   WebhookProcessedStatus @map("processed_status")
+  gatewayName           String                 @map("gateway_name") @db.VarChar(100)
+  providerEventId       String?                @unique @map("provider_event_id") @db.VarChar(150)
+  externalTransactionId String?                @map("external_transaction_id") @db.VarChar(150)
+  externalReference     String?                @map("external_reference") @db.VarChar(150)
+  eventType             String?                @map("event_type") @db.VarChar(100)
+  payload               Json
+  statusReceived        String?                @map("status_received") @db.VarChar(100)
+  processedStatus       WebhookProcessedStatus @map("processed_status")
+  isDuplicate           Boolean                @default(false) @map("is_duplicate")
+  errorMessage          String?                @map("error_message") @db.Text
 
   receivedAt DateTime @default(now()) @map("received_at") @db.Timestamp(3)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(3)
 
+  @@index([paymentAttemptId])
+  @@index([externalTransactionId])
+  @@index([processedStatus])
   @@map("payment_webhook_logs")
 }
 
 model Expense {
-  id            String @id @default(uuid()) @db.Uuid
-  requestedById String @map("requested_by") @db.Uuid
-  requestedBy   User   @relation("ExpenseRequestedBy", fields: [requestedById], references: [id])
+  id            String  @id @default(uuid()) @db.Uuid
+  requestedById String  @map("requested_by") @db.Uuid
+  requestedBy   User    @relation("ExpenseRequestedBy", fields: [requestedById], references: [id])
   approvedById  String? @map("approved_by") @db.Uuid
   approvedBy    User?   @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
 
@@ -303,6 +326,12 @@ model Expense {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
 
+  cashTransactions CashTransaction[]
+
+  @@index([requestedById])
+  @@index([approvedById])
+  @@index([status])
+  @@index([expenseDate])
   @@map("expenses")
 }
 
@@ -311,33 +340,49 @@ model CashTransaction {
 
   transactionCode String              @unique @map("transaction_code") @db.VarChar(100)
   sourceType      CashSourceType      @map("source_type")
-  sourceId        String              @map("source_id") @db.Uuid
   type            CashTransactionType
   amount          Decimal             @default(0) @db.Decimal(15, 2)
   description     String?             @db.Text
   transactionDate DateTime            @map("transaction_date") @db.Date
   createdBySystem Boolean             @default(true) @map("created_by_system")
 
+  paymentId String?  @map("payment_id") @db.Uuid
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+
+  expenseId String?  @map("expense_id") @db.Uuid
+  expense   Expense? @relation(fields: [expenseId], references: [id])
+
+  cashSummaryId String      @map("cash_summary_id") @db.Uuid
+  cashSummary   CashSummary @relation(fields: [cashSummaryId], references: [id])
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
 
+  @@index([paymentId])
+  @@index([expenseId])
+  @@index([cashSummaryId])
+  @@index([sourceType])
+  @@index([type])
+  @@index([transactionDate])
   @@map("cash_transactions")
 }
 
 model CashSummary {
-  id             String    @id @default(uuid()) @db.Uuid
-  periodMonth    Int       @map("period_month")
-  periodYear     Int       @map("period_year")
-  openingBalance Decimal   @default(0) @map("opening_balance") @db.Decimal(15, 2)
-  totalIncome    Decimal   @default(0) @map("total_income") @db.Decimal(15, 2)
-  totalExpense   Decimal   @default(0) @map("total_expense") @db.Decimal(15, 2)
-  closingBalance Decimal   @default(0) @map("closing_balance") @db.Decimal(15, 2)
+  id               String    @id @default(uuid()) @db.Uuid
+  periodMonth      Int       @map("period_month")
+  periodYear       Int       @map("period_year")
+  openingBalance   Decimal   @default(0) @map("opening_balance") @db.Decimal(15, 2)
+  totalIncome      Decimal   @default(0) @map("total_income") @db.Decimal(15, 2)
+  totalExpense     Decimal   @default(0) @map("total_expense") @db.Decimal(15, 2)
+  closingBalance   Decimal   @default(0) @map("closing_balance") @db.Decimal(15, 2)
   lastCalculatedAt DateTime? @map("last_calculated_at") @db.Timestamp(3)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(3)
 
-  // PERBAIKAN: Mengubah @unique satuan menjadi gabungan multi-kolom
+  cashTransactions CashTransaction[]
+
   @@unique([periodMonth, periodYear])
+  @@index([periodYear, periodMonth])
   @@map("cash_summaries")
 }
 
@@ -397,4 +442,3 @@ model Attachment {
 
   @@map("attachments")
 }
-
