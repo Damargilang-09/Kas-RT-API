@@ -1,8 +1,86 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
+import { validate } from "../../validations/validation";
+import { AuthValidation } from "./auth.validation";
 import { AuthService } from "./auth.service";
-import { StatusCodes } from 'http-status-codes';
+import { StatusCodes } from "http-status-codes";
+import { success, url } from "zod";
+import { AuthMiddleware } from "./auth.middleware";
 
-export const AuthControler = {
-  async register() {},
-  async login (){}
-};
+export class AuthController {
+  static async register(req: Request, res: Response) {
+    console.log("USER REGISTER REQUEST:", {
+      method: req.method,
+      url: req.originalUrl,
+      body: {
+        email: req.body.email,
+        password: req.body?.password
+          ? "Password Diterima"
+          : "Password Tidak Ditemukan",
+      },
+    });
+
+    const { body } = validate(AuthValidation.REGISTER_USER, { body: req.body });
+
+    const safeUser = await AuthService.register({ body });
+
+    res.status(StatusCodes.CREATED).json({
+      success: true,
+      message: "User berhasil didaftarkan!",
+      data: safeUser,
+    });
+  }
+  static async login(req: Request, res: Response) {
+    console.log("USER LOGIN REQUEST:", {
+      method: req.method,
+      url: req.originalUrl,
+      body: {
+        email: req.body.email,
+        password: req.body?.password
+          ? "Password Diterima"
+          : "Password Tidak Ditemukan",
+      },
+    });
+
+    const { body } = validate(AuthValidation.LOGIN_USER, { body: req.body });
+
+    const { safeUser, token } = await AuthService.login({ body });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Login user berhasil!",
+    });
+  }
+
+  static async getMe(req: Request, res: Response) {
+    const payload = res.locals.payload;
+
+    const result = await AuthService.getMe(payload.id);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Berhasil mengambil data user login!",
+      data: result,
+    });
+  }
+
+  static async logout(req: Request, res: Response) {
+    res.clearCookie("token", {
+      httpOnly: false,
+      secure: false,
+      sameSite: "lax",
+    });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Logout user berhasil!",
+      data: null,
+    });
+  }
+}
