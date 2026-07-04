@@ -1,23 +1,39 @@
 import express, { Request, Response } from "express";
-import 'dotenv/config'
-import { errorHandler } from "./middlewares/error-handler.midleware";
+import "dotenv/config";
+import cookieParser from "cookie-parser";
 import routes from "./routes";
-
-const PORT = process.env.PORT || 8001;
+import { ErrorMiddleware } from "./middlewares/error-handler.midleware";
+import { API_PREFIX, NODE_ENV, PORT, WHITE_LIST } from "./configs/env.config";
+import cors from "cors";
+import path from "path";
 
 const app = express();
 
+
+app.use(
+  cors({
+    origin: WHITE_LIST,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
-app.use(errorHandler);
-app.use("/api", routes);
 
-app.get("/", (req: Request, res: Response) => {
-  res.status(200).json({
-    message: "Hello, world!",
-  });
-});
+app.use(cookieParser());
 
-if (process.env.NODE_ENV === "development") {
+app.use(
+  `${API_PREFIX}/src/uploads`,
+  express.static(path.join(__dirname, "uploads")),
+);
+
+app.use(`${API_PREFIX}/api`, routes);
+
+
+app.use(ErrorMiddleware);
+
+if (NODE_ENV === "development") {
   app.listen(PORT, () => {
     console.log(`[⚡APP] Application is running on port: ${PORT}`);
   });

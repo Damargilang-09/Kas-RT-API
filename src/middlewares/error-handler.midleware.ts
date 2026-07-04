@@ -1,24 +1,16 @@
-import { Request, Response, NextFunction } from "express";
-import { StatusCodes, ReasonPhrases } from "http-status-codes";
-import { AppError } from "../utils/app-error";
+import { Request, Response, NextFunction } from 'express';
+import { StatusCodes } from 'http-status-codes';
 
-export function errorHandler(
-  err: Error,
-  req: Request,
+export const ErrorMiddleware = (
+  err: any,
+  _: Request,
   res: Response,
-  next: NextFunction
-) {
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
-      success: false,
-      message: err.message,
-    });
-  }
-
-  console.error(err); // error tak terduga, log buat debugging
-
-  return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+  __: NextFunction,
+) => {
+  console.log(err)
+  res.status(err?.statusCode ?? StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
-    message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+    message: err?.isExpose ? err?.message : 'Internal Server Error',
+    data: null,
   });
-}
+};

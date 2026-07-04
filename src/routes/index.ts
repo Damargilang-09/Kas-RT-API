@@ -1,8 +1,9 @@
 import { Router } from "express";
-import authRouter from "../modules/Auth/auth.router";
+import paymentRoutes from '../modules/payment/payment.routes'
 
 const router = Router();
 
-router.use('/auth', authRouter)
+router.use('/payment', paymentRoutes)
+
 
 export default router

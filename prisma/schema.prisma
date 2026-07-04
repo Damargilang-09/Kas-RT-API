@@ -173,8 +173,6 @@ model AuditLog {
   recordId  String?  @map("record_id") @db.Uuid
   oldValue  Json?    @map("old_value")
   newValue  Json?    @map("new_value")
-  ipAddress String?  @map("ip_address") @db.VarChar(45)
-  userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
   user      User?    @relation(fields: [userId], references: [id])
 
