@@ -29,7 +29,7 @@ export class AuthMiddleware {
       console.log("ALLOWED ROLES:", allowedRoles);
       console.log("USER ROLE:", payload?.role);
 
-      if (!payload.role || !allowedRoles.includes(payload?.role)) {
+      if (!payload.role || !allowedRoles.includes(payload.role)) {
         throw new ResponseError(
           StatusCodes.FORBIDDEN,
           "User tidak memiliki akses!",

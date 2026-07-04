@@ -4,10 +4,9 @@ import { ResponseError } from "../../utils/response-error.util";
 import type { AuthLoginRequest, AuthRegisterRequest } from "./auth.validation";
 import { BcryptUtil } from "../../utils/bycrpt.util";
 import { UserRole, UserStatus } from "../../../generated/prisma";
-import { email } from "zod";
-import { th } from "zod/locales";
+
 import { JWTUtil } from "../../utils/jwt.util";
-import { TemplateUtil } from "../mail/templates/utils/template.util";
+
 import { MailService } from "../mail/mail.service";
 
 export class AuthService {
@@ -47,7 +46,8 @@ export class AuthService {
       name: user.name, // proses e mail.config siapin transporter, dipake sama mailer.util, dipake lagi sama mail.service ambil template, kirim ke auth sevice.!
       email: user.email,
     });
-    const { id, passwordHash, ...safeUser } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...safeUser } = user;
 
     return safeUser;
   }
@@ -71,13 +71,6 @@ export class AuthService {
       );
     }
 
-    if (existingUser.status !== UserStatus.active) {
-      throw new ResponseError(
-        StatusCodes.FORBIDDEN,
-        "Akun Anda belum aktif. Silahkan tunggu aktivasi dari Admin",
-      );
-    }
-
     const isValid = await BcryptUtil.compare(
       body.password,
       existingUser.passwordHash,
@@ -90,11 +83,19 @@ export class AuthService {
       );
     }
 
+    if (existingUser.status !== UserStatus.active) {
+      throw new ResponseError(
+        StatusCodes.FORBIDDEN,
+        "Akun Anda belum aktif. Silahkan tunggu aktivasi dari Ketua RT",
+      );
+    }
+
     const token = JWTUtil.signToken({
       id: existingUser.id,
       role: existingUser.role,
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...safeUser } = existingUser;
     return { safeUser, token };
   }

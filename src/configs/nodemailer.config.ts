@@ -5,8 +5,8 @@ import {
   NODEMAILER_GOOGLE_APP_USER_EMAIL,
 } from "./env.config";
 
-console.log("EMAIL_USER:", NODEMAILER_GOOGLE_APP_USER_EMAIL);
-console.log("EMAIL_PASS length:", NODEMAILER_GOOGLE_APP_PASSWORD?.length);
+// console.log("EMAIL_USER:", NODEMAILER_GOOGLE_APP_USER_EMAIL);
+// console.log("EMAIL_PASS length:", NODEMAILER_GOOGLE_APP_PASSWORD?.length);
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {

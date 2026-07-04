@@ -3,8 +3,6 @@ import { validate } from "../../validations/validation";
 import { AuthValidation } from "./auth.validation";
 import { AuthService } from "./auth.service";
 import { StatusCodes } from "http-status-codes";
-import { success, url } from "zod";
-import { AuthMiddleware } from "./auth.middleware";
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -29,6 +27,7 @@ export class AuthController {
       data: safeUser,
     });
   }
+
   static async login(req: Request, res: Response) {
     console.log("USER LOGIN REQUEST:", {
       method: req.method,
@@ -47,7 +46,8 @@ export class AuthController {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
+      secure: false,
+      // secure:true, jangan lupa diganti kalo udah production
       sameSite: true,
       maxAge: 24 * 60 * 60 * 1000,
     });
@@ -55,6 +55,7 @@ export class AuthController {
     res.status(StatusCodes.OK).json({
       success: true,
       message: "Login user berhasil!",
+      data: safeUser,
     });
   }
 
@@ -72,9 +73,10 @@ export class AuthController {
 
   static async logout(req: Request, res: Response) {
     res.clearCookie("token", {
-      httpOnly: false,
+      httpOnly: true,
+      // secure:true, jangan lupa diganti kalo udah production
       secure: false,
-      sameSite: "lax",
+      sameSite: true,
     });
 
     res.status(StatusCodes.OK).json({

@@ -7,3 +7,6 @@ generated/
 
 # Mengabaikan semua file dokumentasi Markdown
 *.md
+
+# Mengabaikan semua file zip
+*.zip
