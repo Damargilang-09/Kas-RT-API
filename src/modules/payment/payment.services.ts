@@ -208,7 +208,7 @@ export class PaymentServices {
   }
 
   static async delete({ params }: PaymentDetailInput) {
-    const findPayment = await prisma.payment.findMany({
+    const findPayment = await prisma.payment.findFirst({
       where: {
         AND: [
           {
