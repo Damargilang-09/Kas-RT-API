@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { ApprovalStatus, BillStatus } from "../../../generated/prisma";
 
+//kirim id lewat body sementara karna belum di integrasikan dengan auth
 export class PaymentValidation {
   static readonly CREATE_PAYMENT = z.object({
     params: z.object({
@@ -8,7 +9,7 @@ export class PaymentValidation {
     }),
     body: z.object({
       userId: z.string().uuid("format user id invalid"),
-      paymentMethod: z.string().min(1, "Sertakan metode pembayaran").optional(),
+      paymentMethod: z.string().trim().min(1, "Sertakan metode pembayaran").max(25).optional(),
     }),
   });
 
@@ -28,7 +29,7 @@ export class PaymentValidation {
           ])
           .optional(),
       ),
-    }),
+    }), 
   });
 
   static readonly PAYMENT_DETAIL = z.object({

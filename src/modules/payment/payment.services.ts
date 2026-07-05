@@ -15,6 +15,7 @@ export class PaymentServices {
     { params, body }: PaymentCreateInput,
     file: Express.Multer.File,
   ) {
+    //todo ubah menjadi findfirst dan tambahkan deletedAt
     const findBill = await prisma.bill.findUnique({
       where: { id: params.billId },
       include: { feeType: { select: { name: true } } },
@@ -53,7 +54,7 @@ export class PaymentServices {
           "Tagihan ini sudah dibatalkan dan tidak dapat diproses pembayarannya",
         );
     }
-    const image = await CloudinaryUtil.uploadStream(file.buffer);
+    const uploadedFile = await CloudinaryUtil.uploadStream(file.buffer);
 
     const { payment, bill } = await prisma.$transaction(async (tx) => {
       const createdPayment = await tx.payment.create({
@@ -61,7 +62,7 @@ export class PaymentServices {
           billId: findBill.id,
           userId: body.userId,
           amount: findBill.amount,
-          payment_proof_img: image,
+          payment_proof_img: uploadedFile,
           paymentMethod: body.paymentMethod ?? null,
           paidAt: new Date(),
         },
