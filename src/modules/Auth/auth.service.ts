@@ -10,6 +10,9 @@ import { JWTUtil } from "../../utils/jwt.util";
 import { MailService } from "../mail/mail.service";
 
 export class AuthService {
+  // TODO: known issue - user yang di-softdelete tidak bisa register ulang
+  // dengan email yang sama karena unique constraint. Belum di-handle karena scope project terbatas.
+
   static async register({ body }: AuthRegisterRequest) {
     const existingEmail = await prisma.user.findUnique({
       where: { email: body.email },

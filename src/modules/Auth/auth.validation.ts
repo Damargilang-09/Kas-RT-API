@@ -5,7 +5,7 @@ export class AuthValidation {
     body: zod.object({
       name: zod
         .string()
-        .min(10, "Nama harus 10-150 karakter")
+        .min(5, "Nama harus 5-150 karakter")
         .max(150, "Nama harus 10-150 karakter"),
 
       email: zod

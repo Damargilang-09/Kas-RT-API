@@ -16,4 +16,16 @@ export class MailService {
       html: htmlTemplate,
     });
   }
+
+  static async sendAccountActivated(user: { name: string; email: string }) {
+    const htmlTemplate = TemplateUtil.compile("account-activated", {
+      name: user.name,
+    });
+
+    await MailerUtil.sendMail({
+      to: user.email,
+      subject: "Akun RTku Anda Sudah Aktif",
+      html: htmlTemplate,
+    });
+  }
 }
