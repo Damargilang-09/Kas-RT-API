@@ -16,8 +16,8 @@ export class PaymentServices {
     file: Express.Multer.File,
   ) {
     //todo ubah menjadi findfirst dan tambahkan deletedAt
-    const findBill = await prisma.bill.findUnique({
-      where: { id: params.billId },
+    const findBill = await prisma.bill.findFirst({
+      where: {AND:[{ id: params.billId },{deleted_at:null}]} ,
       include: { feeType: { select: { name: true } } },
     });
     if (!findBill)
@@ -56,7 +56,7 @@ export class PaymentServices {
     }
     const uploadedFile = await CloudinaryUtil.uploadStream(file.buffer);
 
-    const { payment, bill } = await prisma.$transaction(async (tx) => {
+    const { payment } = await prisma.$transaction(async (tx) => {
       const createdPayment = await tx.payment.create({
         data: {
           billId: findBill.id,
@@ -86,7 +86,6 @@ export class PaymentServices {
       paymentMethod: payment.paymentMethod,
       paidAt: payment.paidAt,
       status: payment.status,
-      billStatus: bill.status,
       paymentProofImg: payment.payment_proof_img,
     };
   }
@@ -107,13 +106,7 @@ export class PaymentServices {
         skip,
         take,
         orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          billId: true,
-          amount: true,
-          paymentMethod: true,
-          paidAt: true,
-          status: true,
+        include: {
           user: { select: { name: true } },
           bill: { select: { feeType: { select: { name: true } } } },
         },
@@ -169,6 +162,7 @@ export class PaymentServices {
         StatusCodes.NOT_FOUND,
         "Detail tagihan tidak dapat di temukan !",
       );
+
 
     return {
       id: findPayment.id,
