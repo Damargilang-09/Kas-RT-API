@@ -60,7 +60,7 @@ export class PaymentController {
   static async getByUserId(req: Request, res: Response) {}
 
   static async update(req: Request, res: Response) {
-    const { params, body } = validate(PaymentValidation.APROVAL_PAYMENT, {
+    const { params, body } = validate(PaymentValidation.APPROVAL_PAYMENT, {
       params: req.params,
       body: req.body,
     });

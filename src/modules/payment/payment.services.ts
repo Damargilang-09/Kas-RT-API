@@ -17,7 +17,7 @@ export class PaymentServices {
   ) {
     //todo ubah menjadi findfirst dan tambahkan deletedAt
     const findBill = await prisma.bill.findFirst({
-      where: {AND:[{ id: params.billId },{deleted_at:null}]} ,
+      where: { AND: [{ id: params.billId }, { deleted_at: null }] },
       include: { feeType: { select: { name: true } } },
     });
     if (!findBill)
@@ -54,40 +54,58 @@ export class PaymentServices {
           "Tagihan ini sudah dibatalkan dan tidak dapat diproses pembayarannya",
         );
     }
-    const uploadedFile = await CloudinaryUtil.uploadStream(file.buffer);
+    let uploadedImage: string;
+    try {
+      uploadedImage = await CloudinaryUtil.uploadStream(
+        file.buffer,
+        "payments",
+      );
+    } catch (error) {
+      throw new ResponseError(
+        StatusCodes.BAD_GATEWAY,
+        "Gagal mengunggah bukti pembayaran, silakan coba lagi",
+      );
+    }
 
-    const { payment } = await prisma.$transaction(async (tx) => {
-      const createdPayment = await tx.payment.create({
-        data: {
-          billId: findBill.id,
-          userId: body.userId,
-          amount: findBill.amount,
-          payment_proof_img: uploadedFile,
-          paymentMethod: body.paymentMethod ?? null,
-          paidAt: new Date(),
-        },
+    try {
+      const { payment, bill } = await prisma.$transaction(async (tx) => {
+        const createdPayment = await tx.payment.create({
+          data: {
+            billId: findBill.id,
+            userId: body.userId,
+            amount: findBill.amount,
+            payment_proof_img: uploadedImage,
+            paymentMethod: body.paymentMethod ?? null,
+            paidAt: new Date(),
+          },
+        });
+
+        const updatedBill = await tx.bill.update({
+          where: { id: findBill.id },
+          data: {
+            status: "pending",
+            paidAt: new Date(),
+          },
+        });
+
+        return { payment: createdPayment, bill: updatedBill };
       });
 
-      const updatedBill = await tx.bill.update({
-        where: { id: findBill.id },
-        data: {
-          status: "pending",
-          paidAt: new Date(),
-        },
-      });
-
-      return { payment: createdPayment, bill: updatedBill };
-    });
-
-    return {
-      id: payment.id,
-      feeTypeName: findBill.feeType.name,
-      amount: payment.amount,
-      paymentMethod: payment.paymentMethod,
-      paidAt: payment.paidAt,
-      status: payment.status,
-      paymentProofImg: payment.payment_proof_img,
-    };
+      return {
+        id: payment.id,
+        feeTypeName: findBill.feeType.name,
+        amount: payment.amount,
+        paymentMethod: payment.paymentMethod,
+        paidAt: payment.paidAt,
+        status: payment.status,
+        billStatus: bill.status,
+        paymentProofImg: payment.payment_proof_img,
+      };
+    } catch (error) {
+      const publicId = CloudinaryUtil.extractPublicId(uploadedImage);
+      await CloudinaryUtil.delete([publicId]).catch(() => {});
+      throw error;
+    }
   }
 
   static async getAll({ query }: PaymentListQueryInput) {
@@ -163,7 +181,6 @@ export class PaymentServices {
         "Detail tagihan tidak dapat di temukan !",
       );
 
-
     return {
       id: findPayment.id,
       billId: findPayment.billId,
@@ -208,27 +225,26 @@ export class PaymentServices {
   }
 
   static async delete({ params }: PaymentDetailInput) {
-    const findPayment = await prisma.payment.findFirst({
-      where: {
-        AND: [
-          {
-            id: params.id,
-          },
-          {
-            deleted_at: null,
-          },
-        ],
-      },
+    const payment = await prisma.payment.findUnique({
+      where: { id: params.id, deleted_at: null },
     });
 
-    if (!findPayment)
-      throw new ResponseError(StatusCodes.NOT_FOUND, "Payment tidak ditemukan");
+    if (!payment)
+      throw new ResponseError(
+        StatusCodes.NOT_FOUND,
+        "Pembayaran tidak ditemukan",
+      );
+
+    if (payment.payment_proof_img) {
+      const publicId = CloudinaryUtil.extractPublicId(
+        payment.payment_proof_img,
+      );
+      await CloudinaryUtil.delete([publicId]).catch(() => {});
+    }
 
     await prisma.payment.update({
       where: { id: params.id },
-      data: {
-        deleted_at: new Date(),
-      },
+      data: { deleted_at: new Date() },
     });
   }
 }

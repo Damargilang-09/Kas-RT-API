@@ -11,17 +11,35 @@ cloudinary.config({
   api_secret: CLOUDINARY_API_SECRET!,
 });
 export class CloudinaryUtil {
-  static async uploadStream(file: Buffer): Promise<string> {
-    return new Promise((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream({ resource_type: "auto" }, (error, result) => {
+  static async uploadStream(file: Buffer, dirName?: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        {
+          resource_type: "auto",
+          ...(dirName && { folder: `uploads/${dirName}` }), 
+        },
+        (error, result) => {
           if (error || !result) {
             return reject(error);
-          } else {
-            return resolve(result?.secure_url);
           }
-        })
-        .end(file);
-    });
+          return resolve(result.secure_url);
+        },
+      )
+      .end(file);
+  });
+}
+
+
+
+static extractPublicId(url: string): string {
+  const urlAfterUpload = url.split('/upload/')[1]?? '';
+  const urlWithoutVersion = urlAfterUpload.replace(/^v\d+\//, '');
+  const publicId = urlWithoutVersion.replace(/\.[^/.]+$/, '');
+  return publicId;
+}
+
+static async delete(publicIds: string[]) {
+    await cloudinary.api.delete_resources(publicIds);
   }
 }

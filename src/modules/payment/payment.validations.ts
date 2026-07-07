@@ -38,7 +38,7 @@ export class PaymentValidation {
     }),
   });
 
-  static readonly APROVAL_PAYMENT = z.object({
+  static readonly APPROVAL_PAYMENT = z.object({
     params: z.object({
       id: z.string().uuid("format id pembayaran invalid"),
     }),
@@ -64,5 +64,5 @@ export type PaymentDetailInput = z.infer<
   typeof PaymentValidation.PAYMENT_DETAIL
 >;
 export type PaymentApprovalInput = z.infer<
-  typeof PaymentValidation.APROVAL_PAYMENT
+  typeof PaymentValidation.APPROVAL_PAYMENT
 >;
