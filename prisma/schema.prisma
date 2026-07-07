@@ -1,9 +1,19 @@
 // This is your Prisma schema file
 // Learn more: https://pris.ly/d/prisma-schema
+//
+// MERGED SCHEMA — hasil penggabungan schema A & B berdasarkan keputusan:
+// - Penamaan tabel & field: lowercase/camelCase seperti B (@@map, @map konsisten)
+// - CashTransaction: struktur kolom pakai A (periodMonth/periodYear, tanpa transactionCode)
+// - AuditLog: pakai A (tanpa ipAddress/userAgent)
+// - Report: tambah soft-delete (deletedAt)
+// - Payment: tambah rejectedReason (dari A)
+// - Expense: tambah periodMonth/periodYear (dari A), rejectedReason pakai VarChar(255) (dari A)
+// - Enum: urutan value pakai B
+// - updatedAt pada Report/Income/ExpenseImage pakai @updatedAt
 
 generator client {
   provider = "prisma-client-js"
-    output   = "../generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -22,7 +32,7 @@ enum UserRole {
   bendahara
   warga
 }
-// "postinstall": "prisma generate"
+
 enum UserStatus {
   active
   inactive
@@ -49,6 +59,8 @@ enum ApprovalStatus {
 }
 
 enum MailerLogType {
+  registration
+  activation
   bill_created
   payment_success
   payment_failed
@@ -60,6 +72,7 @@ enum MailerLogType {
 }
 
 enum MailerReferenceType {
+  user
   bill
   payment
   expense
@@ -181,6 +194,7 @@ model Payment {
   paymentMethod   String?        @map("payment_method") @db.VarChar(100)
   paidAt          DateTime       @map("paid_at")
   status          ApprovalStatus @default(pending)
+  rejectedReason  String?        @map("rejected_reason") @db.VarChar(255)
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
   deletedAt       DateTime?      @map("deleted_at")
@@ -204,10 +218,12 @@ model Expense {
   title          String         @db.VarChar(200)
   description    String?        @db.Text
   amount         Decimal        @default(0) @db.Decimal(15, 2)
+  periodMonth    Int?           @map("period_month")
+  periodYear     Int?           @map("period_year")
   expenseDate    DateTime       @map("expense_date") @db.Date
   status         ApprovalStatus @default(pending)
   approvedAt     DateTime?      @map("approved_at")
-  rejectedReason String?        @map("rejected_reason") @db.Text
+  rejectedReason String?        @map("rejected_reason") @db.VarChar(255)
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   deletedAt      DateTime?      @map("deleted_at")
@@ -284,6 +300,7 @@ model Report {
   lastCalculatedAt DateTime?    @map("last_calculated_at")
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
+  deletedAt        DateTime?    @map("deleted_at")
 
   // Relations
   creator  User? @relation("ReportCreatedBy", fields: [createdBy], references: [id])
@@ -300,14 +317,15 @@ model Report {
 // menggunakan sourceType sebagai penanda tabel ("payment" | "income" | "expense").
 model CashTransaction {
   id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transactionCode String           @unique @map("transaction_code") @db.VarChar(100)
-  sourceType      String           @map("source_type")
-  sourceId        String           @map("source_id") @db.Uuid
-  type            TransactionType?
+  periodMonth     Int?             @map("period_month")
+  periodYear      Int?             @map("period_year")
   amount          Decimal          @default(0) @db.Decimal(15, 2)
   createdBySystem Boolean          @default(true) @map("created_by_system")
   createdAt       DateTime         @default(now()) @map("created_at")
   deletedAt       DateTime?        @map("deleted_at")
+  sourceId        String           @map("source_id") @db.Uuid
+  sourceType      String           @map("source_type")
+  type            TransactionType?
 
   @@map("cash_transactions")
 }
@@ -329,7 +347,7 @@ model MailerLog {
   deletedAt     DateTime?            @map("deleted_at")
 
   // Relations
-  user User? @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("mailer_logs")
 }
@@ -342,8 +360,6 @@ model AuditLog {
   recordId  String?  @map("record_id") @db.Uuid
   oldValue  Json?    @map("old_value")
   newValue  Json?    @map("new_value")
-  ipAddress String?  @map("ip_address") @db.VarChar(45)
-  userAgent String?  @map("user_agent") @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations

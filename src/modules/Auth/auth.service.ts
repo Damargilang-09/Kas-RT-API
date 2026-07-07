@@ -32,27 +32,34 @@ export class AuthService {
 
     const passwordHashed = await BcryptUtil.hash(body.password);
 
-    const user = await prisma.user.create({
-      data: {
-        name: body.name,
-        email: body.email,
-        passwordHash: passwordHashed,
-        role: UserRole.warga,
-        houseNumber: body.houseNumber,
-        address: body.address,
-        status: UserStatus.inactive,
-      },
+    const safeUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name: body.name,
+          email: body.email,
+          passwordHash: passwordHashed,
+          role: UserRole.warga,
+          houseNumber: body.houseNumber,
+          address: body.address,
+          status: UserStatus.inactive,
+        },
+      });
+
+      await MailService.sendRegisterWaitingActivation(
+        {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+        tx,
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { passwordHash, ...userNoPassword } = user;
+      return userNoPassword
     });
 
-    await MailService.sendRegisterWaitingActivation({
-      // ini menyingkat semua proses.
-      name: user.name, // proses e mail.config siapin transporter, dipake sama mailer.util, dipake lagi sama mail.service ambil template, kirim ke auth sevice.!
-      email: user.email,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...safeUser } = user;
-
-    return safeUser;
+    return safeUser
   }
 
   static async login({ body }: AuthLoginRequest) {

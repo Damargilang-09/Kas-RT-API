@@ -27,7 +27,6 @@ export class UserController {
   static async getUserDetail(req: Request, res: Response) {
     console.log("USER CONTROLLER : GET_USER_DETAIL [REQUEST MASUK]");
     console.log("PARAMS :", req.params);
-    console.log("Payload:", res.locals.payload);
 
     const { params } = validate(UserValidation.DETAIL, { params: req.params });
     console.log(

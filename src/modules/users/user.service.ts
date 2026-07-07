@@ -133,25 +133,30 @@ search dan lainnya sama kek di List.
     if (body.role) {
       updateData.role = body.role;
     }
+    const result = await prisma.$transaction(async (tx) => {
+      const userAfterUpdate = await prisma.user.update({
+        where: { id: params.id },
+        data: updateData,
+        select: userSafeSelect,
+      });
 
-    const updateUser = await prisma.user.update({
-      where: { id: params.id },
-      data: updateData,
-      select: userSafeSelect,
+      if (
+        existingUser.status !== UserStatus.active &&
+        userAfterUpdate.status === UserStatus.active
+      ) {
+        await MailService.sendAccountActivated(
+          {
+            id: userAfterUpdate.id,
+            name: userAfterUpdate.name,
+            email: userAfterUpdate.email,
+          },
+          tx,
+        );
+      }
+
+      return userAfterUpdate;
     });
 
-    if (
-      existingUser.status !== UserStatus.active &&
-      updateUser.status === UserStatus.active
-    ) {
-      await MailService.sendAccountActivated({
-        name: updateUser.name,
-        email: updateUser.email,
-      });
-    }
-
-    console.log("STATUS SESUDAH DIUBAH:", updateUser.status);
-    console.log("ROLE SESUDAH DIUBAH:", updateUser.role);
-    return updateUser;
+    return result;
   }
 }
