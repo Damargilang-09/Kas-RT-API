@@ -4,6 +4,7 @@ import { validate } from "../../validation/validation";
 import { StatusCodes } from "http-status-codes";
 import { PaymentServices } from "./payment.services";
 import { ResponseError } from "../../utils/response-error.utils";
+import { QueryValidation } from "../../validation/queryValidation";
 
 export class PaymentController {
   static async create(req: Request, res: Response) {
@@ -30,7 +31,7 @@ export class PaymentController {
     });
   }
   static async getAll(req: Request, res: Response) {
-    const { query } = validate(PaymentValidation.LIST_QUERY, {
+    const { query } = validate(QueryValidation.LIST_QUERY, {
       query: req.query,
     });
 
@@ -59,12 +60,12 @@ export class PaymentController {
   //todo: buat get tagihan per user hanya milik user
   static async getByUserId(req: Request, res: Response) {}
 
-  static async update(req: Request, res: Response) {
+  static async approve(req: Request, res: Response) {
     const { params, body } = validate(PaymentValidation.APPROVAL_PAYMENT, {
       params: req.params,
       body: req.body,
     });
-  const updatedPayment = await PaymentServices.update({params,body});
+  const updatedPayment = await PaymentServices.approve({params,body});
 
    res.status(StatusCodes.OK).json({
       success: true,

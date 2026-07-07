@@ -3,12 +3,12 @@ import {
   PaymentApprovalInput,
   PaymentCreateInput,
   PaymentDetailInput,
-  PaymentListQueryInput,
 } from "./payment.validations";
 import { ResponseError } from "../../utils/response-error.utils";
 import { StatusCodes } from "http-status-codes";
 import { Prisma } from "../../../generated/prisma";
 import { CloudinaryUtil } from "../../utils/cloudinary.utils";
+import { AllListQueryInput } from "../../validation/queryValidation";
 
 export class PaymentServices {
   static async create(
@@ -17,9 +17,10 @@ export class PaymentServices {
   ) {
     //todo ubah menjadi findfirst dan tambahkan deletedAt
     const findBill = await prisma.bill.findFirst({
-      where: { AND: [{ id: params.billId }, { deleted_at: null }] },
+      where: { id: params.billId, deleted_at: null },
       include: { feeType: { select: { name: true } } },
     });
+
     if (!findBill)
       throw new ResponseError(
         StatusCodes.NOT_FOUND,
@@ -108,7 +109,7 @@ export class PaymentServices {
     }
   }
 
-  static async getAll({ query }: PaymentListQueryInput) {
+  static async getAll({ query }: AllListQueryInput) {
     const skip = (query.page - 1) * query.limit;
     const take = query.limit;
 
@@ -116,6 +117,20 @@ export class PaymentServices {
 
     if (query.status) {
       where.status = query.status;
+    }
+
+    if (query.search) {
+      where.bill = {
+        feeType: {
+          name: { contains: query.search, mode: "insensitive" },
+        },
+      };
+    }
+    if (query.year) {
+      where.createdAt = {
+        gte: new Date(`${query.year}-01-01`),
+        lt: new Date(`${query.year + 1}-01-01`),
+      };
     }
 
     const [payment, totalPayment] = await Promise.all([
@@ -194,9 +209,9 @@ export class PaymentServices {
     };
   }
 
-  static async update({ params, body }: PaymentApprovalInput) {
+  static async approve({ params, body }: PaymentApprovalInput) {
     const findPayment = await prisma.payment.findUnique({
-      where: { id: params.id },
+      where: { id: params.id, deleted_at: null },
     });
 
     if (!findPayment)
@@ -205,7 +220,7 @@ export class PaymentServices {
         "Tagihan tidak di temukan !",
       );
 
-    await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const updatedPayment = await tx.payment.update({
         where: { id: params.id },
         data: {
@@ -222,6 +237,7 @@ export class PaymentServices {
 
       return updatedPayment;
     });
+    return result;
   }
 
   static async delete({ params }: PaymentDetailInput) {

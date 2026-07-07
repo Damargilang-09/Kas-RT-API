@@ -13,25 +13,6 @@ export class PaymentValidation {
     }),
   });
 
-  static readonly LIST_QUERY = z.object({
-    query: z.object({
-      page: z.coerce.number().int().min(1).default(1),
-
-      limit: z.coerce.number().int().min(1).max(100).default(10),
-
-      status: z.preprocess(
-        (val) => (val === "" ? undefined : val),
-        z
-          .enum([
-            ApprovalStatus.approved,
-            ApprovalStatus.pending,
-            ApprovalStatus.rejected,
-          ])
-          .optional(),
-      ),
-    }), 
-  });
-
   static readonly PAYMENT_DETAIL = z.object({
     params: z.object({
       id: z.string().uuid("format id pembayaran invalid"),
@@ -57,9 +38,7 @@ export class PaymentValidation {
 export type PaymentCreateInput = z.infer<
   typeof PaymentValidation.CREATE_PAYMENT
 >;
-export type PaymentListQueryInput = z.infer<
-  typeof PaymentValidation.LIST_QUERY
->;
+
 export type PaymentDetailInput = z.infer<
   typeof PaymentValidation.PAYMENT_DETAIL
 >;

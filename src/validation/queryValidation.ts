@@ -8,6 +8,11 @@ export class QueryValidation {
 
       limit: z.coerce.number().int().min(1).max(100).default(10),
 
+      search: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.string().trim().optional(),
+      ),
+
       status: z.preprocess(
         (val) => (val === "" ? undefined : val),
         z
@@ -17,6 +22,14 @@ export class QueryValidation {
             ApprovalStatus.rejected,
           ])
           .optional(),
+      ),
+       month: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.coerce.number().int().min(1).max(12).optional(),
+      ),
+      year: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.coerce.number().int().min(2000).max(2100).optional(),
       ),
     }),
   });
