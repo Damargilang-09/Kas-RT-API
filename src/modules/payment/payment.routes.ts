@@ -13,7 +13,7 @@ router.post("/:billId",multerUploads.single("PAYMENT_IMAGES"), PaymentController
 router.get("/", PaymentController.getAll);
 router.get("/detail/:id", PaymentController.getById);
 router.get("/:userId", PaymentController.getByUserId)
-router.patch("/:id", PaymentController.update);
+router.patch("/:id", PaymentController.approve);
 router.delete("/:id", PaymentController.delete);
 
 export default router;

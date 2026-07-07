@@ -222,16 +222,20 @@ export class PaymentServices {
 
     const result = await prisma.$transaction(async (tx) => {
       const updatedPayment = await tx.payment.update({
-        where: { id: params.id },
+        where: { id: params.id, deleted_at: null },
         data: {
           status: body.status,
           approved_by: body.userId,
+          rejectedReason:
+            body.status === "rejected" ? (body.rejectedReason ?? null) : null,
         },
       });
+
       await tx.bill.update({
         where: { id: findPayment.billId },
         data: {
-          status: body.billStatus,
+          status: body.status === "rejected" ? "unpaid" : "paid", 
+          paidAt: body.status === "approved" ? new Date() : null,
         },
       });
 

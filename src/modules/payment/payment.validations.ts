@@ -28,9 +28,10 @@ export class PaymentValidation {
       status: z.enum([ApprovalStatus.approved, ApprovalStatus.rejected], {
         error: "status is invalid",
       }),
-      billStatus: z.enum([BillStatus.paid, BillStatus.unpaid], {
-        error: "Bill status is invalid",
-      }),
+      rejectedReason: z
+              .string()
+              .min(1, "rejected reason is required field")
+              .optional(),
     }),
   });
 }
