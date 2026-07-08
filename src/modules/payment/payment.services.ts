@@ -126,6 +126,7 @@ export class PaymentServices {
         },
       };
     }
+
     if (query.year) {
       where.createdAt = {
         gte: new Date(`${query.year}-01-01`),
