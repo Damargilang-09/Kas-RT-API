@@ -205,7 +205,7 @@ export class ExpensesService {
 
     const result = await prisma.$transaction(async (tx) => {
       const UpdateExpenses = await tx.expense.update({
-        where: { id: params.id, deleted_at: null },
+        where: { id: findExpenses.id},
         data: {
           approvedById:
             body.status === "rejected" ? (body.userId ?? null) : null,
@@ -268,7 +268,7 @@ export class ExpensesService {
 
     await prisma.$transaction(async (tx) => {
       await tx.expense.update({
-        where: { id: params.id },
+        where: { id: findExpense.id },
         data: { deleted_at: new Date() },
       });
 

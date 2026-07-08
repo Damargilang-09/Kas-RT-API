@@ -11,6 +11,7 @@ export class ExpensesController {
     const { body } = validate(ExpensesValidation.CREATE_EXPENSES, {
       body: req.body,
     });
+    
     const files: Express.Multer.File[] = Array.isArray(req.files)
       ? req.files
       : [];
