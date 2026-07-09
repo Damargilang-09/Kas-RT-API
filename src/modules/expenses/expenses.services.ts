@@ -211,7 +211,7 @@ export class ExpensesService {
         where: { id: findExpenses.id },
         data: {
           approvedById:
-            body.status === "rejected" ? (body.userId ?? null) : null,
+            body.status === "approved" ? (body.userId ?? null) : null,
           approvedAt: body.status === "approved" ? new Date() : null,
           rejectedReason:
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
