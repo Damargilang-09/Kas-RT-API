@@ -65,12 +65,12 @@ export class PaymentController {
       params: req.params,
       body: req.body,
     });
-  const updatedPayment = await PaymentServices.approve({params,body});
+  const formattedPayment = await PaymentServices.approve({params,body});
 
    res.status(StatusCodes.OK).json({
       success: true,
       message: "Approval berhasil dilakukan",
-      data: updatedPayment,
+      data: formattedPayment,
     });
   }
 
