@@ -226,7 +226,7 @@ export class PaymentServices {
         where: { id: params.id, deleted_at: null },
         data: {
           status: body.status,
-          approved_by: body.userId,
+          approved_by: body.status === "approved" ? (body.userId ?? null) : null,
           rejectedReason:
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
         },
@@ -236,7 +236,6 @@ export class PaymentServices {
         where: { id: findPayment.billId },
         data: {
           status: body.status === "rejected" ? "unpaid" : "paid",
-          paidAt: body.status === "approved" ? new Date() : null,
         },
       });
 
