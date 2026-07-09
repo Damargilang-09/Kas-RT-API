@@ -235,14 +235,27 @@ export class PaymentServices {
       await tx.bill.update({
         where: { id: findPayment.billId },
         data: {
-          status: body.status === "rejected" ? "unpaid" : "paid", 
+          status: body.status === "rejected" ? "unpaid" : "paid",
           paidAt: body.status === "approved" ? new Date() : null,
         },
       });
 
+      if (body.status === "approved")
+        await tx.cashTransaction.create({
+          data: {
+            amount: findPayment.amount,
+            sourceId: findPayment.id,
+            sourceType: "payment",
+            type: "income",
+            periodMonth: new Date().getMonth() + 1,
+            periodYear: new Date().getFullYear(),
+          },
+        });
+      // const{userId,...formattedPayment} = updatedPayment
       return updatedPayment;
     });
-    return result;
+    const { userId, approved_by, ...formattedPayment } = result;
+    return formattedPayment;
   }
 
   static async delete({ params }: PaymentDetailInput) {
