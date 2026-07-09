@@ -70,7 +70,10 @@ export class ExpensesService {
         return createdExpense;
       });
 
-      return result;
+      const{id,requestedById,approvedById,...formattedExpenses} = result
+
+      return formattedExpenses;
+
     } catch (error) {
       // rollback manual: hapus semua gambar yang udah kepalang ke-upload
       const publicIds = uploadedImages.map((url) =>
@@ -205,7 +208,7 @@ export class ExpensesService {
 
     const result = await prisma.$transaction(async (tx) => {
       const UpdateExpenses = await tx.expense.update({
-        where: { id: findExpenses.id},
+        where: { id: findExpenses.id },
         data: {
           approvedById:
             body.status === "rejected" ? (body.userId ?? null) : null,
@@ -213,10 +216,6 @@ export class ExpensesService {
           rejectedReason:
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
           status: body.status,
-        },
-        include: {
-          requestedBy: { select: { name: true } },
-          approvedBy: { select: { name: true } },
         },
       });
       await tx.expenses_images.updateMany({
@@ -226,10 +225,24 @@ export class ExpensesService {
           status: body.status,
         },
       });
+
+      if (body.status === "approved")
+        await tx.cashTransaction.create({
+          data: {
+            amount: findExpenses.amount,
+            sourceId: findExpenses.id,
+            sourceType: "expenses",
+            type: "expenses",
+            periodMonth: new Date().getMonth() + 1,
+            periodYear: new Date().getFullYear(),
+          },
+        });
       return UpdateExpenses;
     });
 
-    return result;
+const{id,approvedById,requestedById,...formattedExpenses} = result
+
+    return formattedExpenses;
   }
   static async delete({ params }: ExpensesDetailInput) {
     const findExpense = await prisma.expense.findUnique({

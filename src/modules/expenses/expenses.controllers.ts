@@ -16,12 +16,12 @@ export class ExpensesController {
       ? req.files
       : [];
 
-    const createdExpenses = await ExpensesService.create({ body }, files);
+    const formattedExpenses = await ExpensesService.create({ body }, files);
 
     res.status(StatusCodes.OK).json({
       success: true,
-      massage: `pencatatan pengeluaran ${createdExpenses.title} dengan jumlah ${createdExpenses.amount} berhasil dibuat. Status: Menunggu Persetujuan Ketua RT.`,
-      data: createdExpenses,
+      massage: `pencatatan pengeluaran ${formattedExpenses.title} dengan jumlah ${formattedExpenses.amount} berhasil dibuat. Status: Menunggu Persetujuan Ketua RT.`,
+      data: formattedExpenses,
     });
   }
 
@@ -60,12 +60,12 @@ export class ExpensesController {
       body: req.body,
     });
 
-    const result = await ExpensesService.approve({ params, body });
+    const formattedExpenses = await ExpensesService.approve({ params, body });
 
     res.status(StatusCodes.OK).json({
       success: true,
-      message: `catatan pengeluaran ${result.title} berhasil di update`,
-      data: result,
+      message: `catatan pengeluaran ${formattedExpenses.title} berhasil di update`,
+      data: formattedExpenses,
     });
   }
 
