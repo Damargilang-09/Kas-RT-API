@@ -74,7 +74,7 @@ export class UserService {
       orderBy: [{ status: "desc" }, { createdAt: "asc" }],
     });
 
-    return {
+    const result = {
       users,
       meta: {
         page: query.page,
@@ -82,6 +82,8 @@ export class UserService {
         totalPage,
       },
     };
+
+    return result;
   }
 
   /* 
@@ -111,20 +113,19 @@ search dan lainnya sama kek di List.
     });
 
     if (!existingUser) {
-      throw new ResponseError(StatusCodes.NOT_FOUND, "User tidak ditemukan!");
+      throw new ResponseError(StatusCodes.NOT_FOUND, "User not found!");
     }
-    console.log("STATUS SEBELUM DIUBAH:", existingUser.status);
-    console.log("ROLE SEBELUM DIUBAH:", existingUser.role);
+
     if (body.role) {
       const statusAfterUpdate = body.status ? body.status : existingUser.status;
       if (statusAfterUpdate !== UserStatus.active) {
         throw new ResponseError(
           StatusCodes.BAD_REQUEST,
-          "User harus ACTIVE sebelum role bisa diubah",
+          "User must be ACTIVE before role can be changed",
         );
       }
     }
-
+//
     const updateData: Prisma.UserUpdateInput = {};
 
     if (body.status) {
@@ -133,30 +134,31 @@ search dan lainnya sama kek di List.
     if (body.role) {
       updateData.role = body.role;
     }
-    const result = await prisma.$transaction(async (tx) => {
-      const userAfterUpdate = await prisma.user.update({
+
+    const userAfterUpdate = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
         where: { id: params.id },
         data: updateData,
         select: userSafeSelect,
       });
 
-      if (
-        existingUser.status !== UserStatus.active &&
-        userAfterUpdate.status === UserStatus.active
-      ) {
-        await MailService.sendAccountActivated(
-          {
-            id: userAfterUpdate.id,
-            name: userAfterUpdate.name,
-            email: userAfterUpdate.email,
-          },
-          tx,
-        );
-      }
-
-      return userAfterUpdate;
+      return updatedUser;
     });
+//
+    const statusBefore = existingUser.status;
+    const statusAfter = userAfterUpdate.status;
 
-    return result;
+    const userJustActive =
+      statusBefore !== UserStatus.active && statusAfter === UserStatus.active;
+
+    if (userJustActive) {
+      await MailService.accountActivated({
+        id: userAfterUpdate.id,
+        name: userAfterUpdate.name,
+        email: userAfterUpdate.email,
+      });
+    }
+
+    return userAfterUpdate;
   }
 }

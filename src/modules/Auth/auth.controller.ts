@@ -62,12 +62,12 @@ export class AuthController {
   static async getMe(req: Request, res: Response) {
     const payload = res.locals.payload;
 
-    const result = await AuthService.getMe(payload.id);
+    const getMe = await AuthService.getMe(payload.id);
 
     res.status(StatusCodes.OK).json({
       success: true,
       message: "Berhasil mengambil data user login!",
-      data: result,
+      data: getMe,
     });
   }
 

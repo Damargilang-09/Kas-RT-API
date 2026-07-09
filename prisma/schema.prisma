@@ -1,16 +1,3 @@
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-//
-// MERGED SCHEMA — hasil penggabungan schema A & B berdasarkan keputusan:
-// - Penamaan tabel & field: lowercase/camelCase seperti B (@@map, @map konsisten)
-// - CashTransaction: struktur kolom pakai A (periodMonth/periodYear, tanpa transactionCode)
-// - AuditLog: pakai A (tanpa ipAddress/userAgent)
-// - Report: tambah soft-delete (deletedAt)
-// - Payment: tambah rejectedReason (dari A)
-// - Expense: tambah periodMonth/periodYear (dari A), rejectedReason pakai VarChar(255) (dari A)
-// - Enum: urutan value pakai B
-// - updatedAt pada Report/Income/ExpenseImage pakai @updatedAt
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -22,9 +9,242 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ==========================================
-// ENUMS
-// ==========================================
+model User {
+  id                                                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                                               String            @db.VarChar(150)
+  email                                              String            @unique @db.VarChar(150)
+  passwordHash                                       String            @map("password_hash") @db.VarChar(255)
+  houseNumber                                        String?           @unique @map("house_number") @db.VarChar(50)
+  address                                            String?
+  createdAt                                          DateTime          @default(now()) @map("created_at")
+  updatedAt                                          DateTime          @updatedAt @map("updated_at")
+  deletedAt                                          DateTime?         @map("deleted_at")
+  role                                               UserRole          @default(warga)
+  status                                             UserStatus        @default(inactive)
+  Expenses_images_Expenses_images_approved_byTousers Expenses_images[] @relation("Expenses_images_approved_byTousers")
+  Expenses_images_Expenses_images_created_byTousers  Expenses_images[] @relation("Expenses_images_created_byTousers")
+  Income_Income_approved_byTousers                   Income[]          @relation("Income_approved_byTousers")
+  Income_Income_created_byTousers                    Income[]          @relation("Income_created_byTousers")
+  Reports_Reports_approved_byTousers                 Reports[]         @relation("Reports_approved_byTousers")
+  Reports_Reports_created_byTousers                  Reports[]         @relation("Reports_created_byTousers")
+  auditLogs                                          AuditLog[]
+  bills                                              Bill[]
+  expensesApproved                                   Expense[]         @relation("ExpenseApprovedBy")
+  expensesRequested                                  Expense[]         @relation("ExpenseRequestedBy")
+  feeTypesCreated                                    FeeType[]         @relation("FeeTypeCreatedBy")
+  mailerLogs                                         MailerLog[]
+  paymentsApproved                                   Payment[]         @relation("PaymentApprovedBy")
+  payments                                           Payment[]         @relation("PaymentUser")
+
+  @@map("users")
+}
+
+model FeeType {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdBy     String        @map("created_by") @db.Uuid
+  name          String        @db.VarChar(150)
+  description   String?
+  amount        Decimal       @default(0) @db.Decimal(15, 2)
+  dueDay        Int?          @map("due_day")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deletedAt     DateTime?     @map("deleted_at")
+  billingPeriod BillingPeriod @default(once) @map("billing_period")
+  bills         Bill[]
+  creator       User          @relation("FeeTypeCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("fee_types")
+}
+
+model Bill {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  feeTypeId   String     @map("fee_type_id") @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  billCode    String     @unique @map("bill_code") @db.VarChar(100)
+  amount      Decimal    @default(0) @db.Decimal(15, 2)
+  periodMonth Int?       @map("period_month")
+  periodYear  Int?       @map("period_year")
+  dueDate     DateTime   @map("due_date") @db.Date
+  paidAt      DateTime?  @map("paid_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at")
+  status      BillStatus @default(unpaid)
+  feeType     FeeType    @relation(fields: [feeTypeId], references: [id])
+  user        User       @relation(fields: [userId], references: [id])
+  payments    Payment[]
+
+  @@unique([feeTypeId, userId, periodMonth, periodYear])
+  @@index([userId])
+  @@index([feeTypeId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([periodYear, periodMonth])
+  @@map("bills")
+}
+
+model Payment {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  billId          String         @map("bill_id") @db.Uuid
+  userId          String         @map("user_id") @db.Uuid
+  amount          Decimal        @default(0) @db.Decimal(15, 2)
+  paymentMethod   String?        @map("payment_method") @db.VarChar(100)
+  paidAt          DateTime       @map("paid_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  approvedBy      String?        @map("approved_by") @db.Uuid
+  deletedAt       DateTime?      @map("deleted_at")
+  paymentProofImg String?        @map("payment_proof_img") @db.VarChar(255)
+  status          ApprovalStatus @default(pending)
+  rejectedReason  String?        @map("rejected_reason") @db.VarChar(255)
+  approver        User?          @relation("PaymentApprovedBy", fields: [approvedBy], references: [id])
+  bill            Bill           @relation(fields: [billId], references: [id])
+  user            User           @relation("PaymentUser", fields: [userId], references: [id])
+
+  @@index([billId])
+  @@index([userId])
+  @@index([paidAt])
+  @@map("payments")
+}
+
+model Expense {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestedBy     String            @map("requested_by") @db.Uuid
+  approvedBy      String?           @map("approved_by") @db.Uuid
+  expenseCode     String            @unique @map("expense_code") @db.VarChar(100)
+  title           String            @db.VarChar(200)
+  description     String?
+  amount          Decimal           @default(0) @db.Decimal(15, 2)
+  expenseDate     DateTime          @map("expense_date") @db.Date
+  approvedAt      DateTime?         @map("approved_at")
+  rejectedReason  String?           @map("rejected_reason") @db.VarChar(255)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  deletedAt       DateTime?         @map("deleted_at")
+  status          ApprovalStatus    @default(pending)
+  periodMonth     Int?              @map("period_month")
+  periodYear      Int?              @map("period_year")
+  Expenses_images Expenses_images[]
+  approver        User?             @relation("ExpenseApprovedBy", fields: [approvedBy], references: [id])
+  requester       User              @relation("ExpenseRequestedBy", fields: [requestedBy], references: [id])
+
+  @@index([requestedBy])
+  @@index([approvedBy])
+  @@index([status])
+  @@index([expenseDate])
+  @@map("expenses")
+}
+
+model CashTransaction {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  amount          Decimal          @default(0) @db.Decimal(15, 2)
+  createdBySystem Boolean          @default(true) @map("created_by_system")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  deletedAt       DateTime?        @map("deleted_at")
+  sourceId        String           @map("source_id") @db.Uuid
+  sourceType      String           @map("source_type")
+  type            TransactionType?
+  periodMonth     Int?             @map("period_month")
+  periodYear      Int?             @map("period_year")
+
+  @@map("cash_transactions")
+}
+
+model MailerLog {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String?              @map("user_id") @db.Uuid
+  emailTo       String               @map("email_to") @db.VarChar(150)
+  subject       String               @db.VarChar(255)
+  body          String
+  referenceId   String?              @map("reference_id") @db.Uuid
+  sentAt        DateTime?            @map("sent_at")
+  errorMessage  String?              @map("error_message")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  deletedAt     DateTime?            @map("deleted_at")
+  type          MailerLogType
+  referenceType MailerReferenceType? @map("reference_type")
+  status        MailerStatus         @default(pending)
+  user          User?                @relation(fields: [userId], references: [id])
+
+  @@map("mailer_logs")
+}
+
+model AuditLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  action    String   @db.VarChar(100)
+  tableName String   @map("table_name") @db.VarChar(100)
+  recordId  String?  @map("record_id") @db.Uuid
+  oldValue  Json?    @map("old_value")
+  newValue  Json?    @map("new_value")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Expenses_images {
+  id                                       String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_by                               String?         @db.Uuid
+  approved_by                              String?         @db.Uuid
+  expenses_id                              String?         @db.Uuid
+  status                                   ApprovalStatus?
+  attachment_url                           String?         @db.VarChar(255)
+  created_at                               DateTime        @default(now())
+  updated_at                               DateTime
+  deleted_at                               DateTime?
+  users_Expenses_images_approved_byTousers User?           @relation("Expenses_images_approved_byTousers", fields: [approved_by], references: [id])
+  users_Expenses_images_created_byTousers  User?           @relation("Expenses_images_created_byTousers", fields: [created_by], references: [id])
+  expenses                                 Expense?        @relation(fields: [expenses_id], references: [id])
+}
+
+model Income {
+  id                              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_by                      String?        @db.Uuid
+  income_code                     String         @unique @db.VarChar(100)
+  title                           String         @db.VarChar(200)
+  description                     String?
+  amount                          Decimal        @default(0) @db.Decimal(15, 2)
+  income_date                     DateTime       @db.Date
+  status                          ApprovalStatus @default(pending)
+  approved_at                     DateTime?
+  rejected_reason                 String?
+  period_month                    Int?
+  period_year                     Int?
+  created_at                      DateTime       @default(now())
+  updated_at                      DateTime
+  deleted_at                      DateTime?
+  approved_by                     String?        @db.Uuid
+  users_Income_approved_byTousers User?          @relation("Income_approved_byTousers", fields: [approved_by], references: [id])
+  users_Income_created_byTousers  User?          @relation("Income_created_byTousers", fields: [created_by], references: [id])
+
+  @@index([income_date])
+  @@index([status])
+}
+
+model Reports {
+  id                               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_by                       String?      @db.Uuid
+  approved_by                      String?      @db.Uuid
+  report_proof_img                 String?      @db.VarChar(255)
+  period_month                     Int
+  period_year                      Int
+  status                           ReportStatus @default(open)
+  opening_balance                  Decimal      @default(0) @db.Decimal(15, 2)
+  total_income                     Decimal      @default(0) @db.Decimal(15, 2)
+  total_expense                    Decimal      @default(0) @db.Decimal(15, 2)
+  closing_balance                  Decimal      @default(0) @db.Decimal(15, 2)
+  last_calculated_at               DateTime?
+  created_at                       DateTime     @default(now())
+  updated_at                       DateTime
+  deleted_at                       DateTime?
+  users_Reports_approved_byTousers User?        @relation("Reports_approved_byTousers", fields: [approved_by], references: [id])
+  users_Reports_created_byTousers  User?        @relation("Reports_created_byTousers", fields: [created_by], references: [id])
+
+  @@unique([period_month, period_year])
+  @@index([period_year, period_month])
+}
 
 enum UserRole {
   superAdmin
@@ -59,8 +279,6 @@ enum ApprovalStatus {
 }
 
 enum MailerLogType {
-  registration
-  activation
   bill_created
   payment_success
   payment_failed
@@ -69,25 +287,22 @@ enum MailerLogType {
   expense_rejected
   reminder
   system
+  registration
+  activation
 }
 
 enum MailerReferenceType {
-  user
   bill
   payment
   expense
   system
+  user
 }
 
 enum MailerStatus {
   pending
   sent
   failed
-}
-
-enum ExpenseImageType {
-  documentation
-  prooving
 }
 
 enum ReportStatus {
@@ -99,271 +314,4 @@ enum ReportStatus {
 enum TransactionType {
   income
   expenses
-}
-
-// ==========================================
-// MODELS
-// ==========================================
-
-model User {
-  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name         String     @db.VarChar(150)
-  email        String     @unique @db.VarChar(150)
-  passwordHash String     @map("password_hash") @db.VarChar(255)
-  role         UserRole   @default(warga)
-  houseNumber  String?    @unique @map("house_number") @db.VarChar(50)
-  address      String?    @db.Text
-  status       UserStatus @default(inactive)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  deletedAt    DateTime?  @map("deleted_at")
-
-  // Relations
-  feeTypesCreated       FeeType[]      @relation("FeeTypeCreatedBy")
-  bills                 Bill[]
-  payments              Payment[]      @relation("PaymentUser")
-  paymentsApproved      Payment[]      @relation("PaymentApprovedBy")
-  expensesRequested     Expense[]      @relation("ExpenseRequestedBy")
-  expensesApproved      Expense[]      @relation("ExpenseApprovedBy")
-  expenseImagesCreated  ExpenseImage[] @relation("ExpenseImageCreatedBy")
-  expenseImagesApproved ExpenseImage[] @relation("ExpenseImageApprovedBy")
-  incomeCreated         Income[]       @relation("IncomeCreatedBy")
-  reportsCreated        Report[]       @relation("ReportCreatedBy")
-  reportsApproved       Report[]       @relation("ReportApprovedBy")
-  mailerLogs            MailerLog[]
-  auditLogs             AuditLog[]
-
-  @@map("users")
-}
-
-model FeeType {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdBy     String        @map("created_by") @db.Uuid
-  name          String        @db.VarChar(150)
-  description   String?       @db.Text
-  amount        Decimal       @default(0) @db.Decimal(15, 2)
-  billingPeriod BillingPeriod @default(once) @map("billing_period")
-  dueDay        Int?          @map("due_day")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  deletedAt     DateTime?     @map("deleted_at")
-
-  // Relations
-  creator User   @relation("FeeTypeCreatedBy", fields: [createdBy], references: [id])
-  bills   Bill[]
-
-  @@map("fee_types")
-}
-
-model Bill {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  feeTypeId   String     @map("fee_type_id") @db.Uuid
-  userId      String     @map("user_id") @db.Uuid
-  billCode    String     @unique @map("bill_code") @db.VarChar(100)
-  amount      Decimal    @default(0) @db.Decimal(15, 2)
-  periodMonth Int?       @map("period_month")
-  periodYear  Int?       @map("period_year")
-  dueDate     DateTime   @map("due_date") @db.Date
-  status      BillStatus @default(unpaid)
-  paidAt      DateTime?  @map("paid_at")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  deletedAt   DateTime?  @map("deleted_at")
-
-  // Relations
-  feeType  FeeType   @relation(fields: [feeTypeId], references: [id])
-  user     User      @relation(fields: [userId], references: [id])
-  payments Payment[]
-
-  @@unique([feeTypeId, userId, periodMonth, periodYear])
-  @@index([userId])
-  @@index([feeTypeId])
-  @@index([status])
-  @@index([dueDate])
-  @@index([periodYear, periodMonth])
-  @@map("bills")
-}
-
-model Payment {
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  billId          String         @map("bill_id") @db.Uuid
-  userId          String         @map("user_id") @db.Uuid
-  paymentProofImg String?        @map("payment_proof_img") @db.VarChar(255)
-  approvedBy      String?        @map("approved_by") @db.Uuid
-  amount          Decimal        @default(0) @db.Decimal(15, 2)
-  paymentMethod   String?        @map("payment_method") @db.VarChar(100)
-  paidAt          DateTime       @map("paid_at")
-  status          ApprovalStatus @default(pending)
-  rejectedReason  String?        @map("rejected_reason") @db.VarChar(255)
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-  deletedAt       DateTime?      @map("deleted_at")
-
-  // Relations
-  bill     Bill  @relation(fields: [billId], references: [id])
-  user     User  @relation("PaymentUser", fields: [userId], references: [id])
-  approver User? @relation("PaymentApprovedBy", fields: [approvedBy], references: [id])
-
-  @@index([billId])
-  @@index([userId])
-  @@index([paidAt])
-  @@map("payments")
-}
-
-model Expense {
-  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  requestedBy    String         @map("requested_by") @db.Uuid
-  approvedBy     String?        @map("approved_by") @db.Uuid
-  expenseCode    String         @unique @map("expense_code") @db.VarChar(100)
-  title          String         @db.VarChar(200)
-  description    String?        @db.Text
-  amount         Decimal        @default(0) @db.Decimal(15, 2)
-  periodMonth    Int?           @map("period_month")
-  periodYear     Int?           @map("period_year")
-  expenseDate    DateTime       @map("expense_date") @db.Date
-  status         ApprovalStatus @default(pending)
-  approvedAt     DateTime?      @map("approved_at")
-  rejectedReason String?        @map("rejected_reason") @db.VarChar(255)
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  deletedAt      DateTime?      @map("deleted_at")
-
-  // Relations
-  requester User           @relation("ExpenseRequestedBy", fields: [requestedBy], references: [id])
-  approver  User?          @relation("ExpenseApprovedBy", fields: [approvedBy], references: [id])
-  images    ExpenseImage[]
-
-  @@index([requestedBy])
-  @@index([approvedBy])
-  @@index([status])
-  @@index([expenseDate])
-  @@map("expenses")
-}
-
-model ExpenseImage {
-  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdBy     String?           @map("created_by") @db.Uuid
-  approvedBy    String?           @map("approved_by") @db.Uuid
-  expenseId     String?           @map("expenses_id") @db.Uuid
-  name          String?           @db.VarChar(50)
-  description   String?           @db.Text
-  status        ApprovalStatus?
-  type          ExpenseImageType?
-  attachmentUrl String?           @map("attachment_url") @db.VarChar(255)
-  createdAt     DateTime          @default(now()) @map("created_at")
-  updatedAt     DateTime          @updatedAt @map("updated_at")
-  deletedAt     DateTime?         @map("deleted_at")
-
-  // Relations
-  creator  User?    @relation("ExpenseImageCreatedBy", fields: [createdBy], references: [id])
-  approver User?    @relation("ExpenseImageApprovedBy", fields: [approvedBy], references: [id])
-  expense  Expense? @relation(fields: [expenseId], references: [id])
-
-  @@map("expenses_images")
-}
-
-model Income {
-  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdBy      String?        @map("created_by") @db.Uuid
-  incomeCode     String         @unique @map("income_code") @db.VarChar(100)
-  title          String         @db.VarChar(200)
-  description    String?        @db.Text
-  amount         Decimal        @default(0) @db.Decimal(15, 2)
-  incomeDate     DateTime       @map("income_date") @db.Date
-  status         ApprovalStatus @default(pending)
-  approvedAt     DateTime?      @map("approved_at")
-  rejectedReason String?        @map("rejected_reason") @db.Text
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  deletedAt      DateTime?      @map("deleted_at")
-
-  // Relations
-  creator User? @relation("IncomeCreatedBy", fields: [createdBy], references: [id])
-
-  @@index([status])
-  @@index([incomeDate])
-  @@map("income")
-}
-
-model Report {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdBy        String?      @map("created_by") @db.Uuid
-  approvedBy       String?      @map("approved_by") @db.Uuid
-  reportProofImg   String?      @map("report_proof_img") @db.VarChar(255)
-  periodMonth      Int          @map("period_month")
-  periodYear       Int          @map("period_year")
-  status           ReportStatus @default(open)
-  openingBalance   Decimal      @default(0) @map("opening_balance") @db.Decimal(15, 2)
-  totalIncome      Decimal      @default(0) @map("total_income") @db.Decimal(15, 2)
-  totalExpense     Decimal      @default(0) @map("total_expense") @db.Decimal(15, 2)
-  closingBalance   Decimal      @default(0) @map("closing_balance") @db.Decimal(15, 2)
-  lastCalculatedAt DateTime?    @map("last_calculated_at")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
-  deletedAt        DateTime?    @map("deleted_at")
-
-  // Relations
-  creator  User? @relation("ReportCreatedBy", fields: [createdBy], references: [id])
-  approver User? @relation("ReportApprovedBy", fields: [approvedBy], references: [id])
-
-  @@unique([periodMonth, periodYear])
-  @@index([periodYear, periodMonth])
-  @@map("reports")
-}
-
-// NOTE: source_id bersifat polymorphic — bisa merujuk ke payments, income, atau expenses.
-// Prisma tidak support polymorphic relation secara native, sehingga relasi ke tabel sumber
-// tidak didefinisikan di sini. Join harus dilakukan manual di service layer
-// menggunakan sourceType sebagai penanda tabel ("payment" | "income" | "expense").
-model CashTransaction {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  periodMonth     Int?             @map("period_month")
-  periodYear      Int?             @map("period_year")
-  amount          Decimal          @default(0) @db.Decimal(15, 2)
-  createdBySystem Boolean          @default(true) @map("created_by_system")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  deletedAt       DateTime?        @map("deleted_at")
-  sourceId        String           @map("source_id") @db.Uuid
-  sourceType      String           @map("source_type")
-  type            TransactionType?
-
-  @@map("cash_transactions")
-}
-
-model MailerLog {
-  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String?              @map("user_id") @db.Uuid
-  emailTo       String               @map("email_to") @db.VarChar(150)
-  subject       String               @db.VarChar(255)
-  body          String               @db.Text
-  type          MailerLogType
-  referenceType MailerReferenceType? @map("reference_type")
-  referenceId   String?              @map("reference_id") @db.Uuid
-  status        MailerStatus         @default(pending)
-  sentAt        DateTime?            @map("sent_at")
-  errorMessage  String?              @map("error_message") @db.Text
-  createdAt     DateTime             @default(now()) @map("created_at")
-  updatedAt     DateTime             @updatedAt @map("updated_at")
-  deletedAt     DateTime?            @map("deleted_at")
-
-  // Relations
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@map("mailer_logs")
-}
-
-model AuditLog {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String?  @map("user_id") @db.Uuid
-  action    String   @db.VarChar(100)
-  tableName String   @map("table_name") @db.VarChar(100)
-  recordId  String?  @map("record_id") @db.Uuid
-  oldValue  Json?    @map("old_value")
-  newValue  Json?    @map("new_value")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  // Relations
-  user User? @relation(fields: [userId], references: [id])
-
-  @@map("audit_logs")
 }

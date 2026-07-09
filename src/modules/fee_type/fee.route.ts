@@ -3,7 +3,6 @@ import { AuthMiddleware } from "../auth/auth.middleware";
 import { UserRole } from "../../../generated/prisma";
 import { FeeController } from "./fee.controller";
 
-console.log("[FEE_ROUTE] file loaded");
 
 export const FeeRoutes = Router();
 

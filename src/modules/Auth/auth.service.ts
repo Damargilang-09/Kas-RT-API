@@ -45,13 +45,13 @@ export class AuthService {
         },
       });
 
-      await MailService.sendRegisterWaitingActivation(
+      await MailService.registerWaiting(
         {
           id: user.id,
           name: user.name,
           email: user.email,
         },
-        tx,
+        // tx,
       );
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars

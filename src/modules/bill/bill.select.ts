@@ -1,0 +1,16 @@
+export const billSelect = {
+  id: true,
+  feeTypeId: true,
+  userId: true,
+  billCode: true,
+  amount: true,
+  periodYear: true,
+  periodMonth: true,
+  dueDate: true,
+  status: true,
+  paidAt: true,
+  createdAt: true,
+  updatedAt: true,
+  feeType: { select: { id: true, name: true, billingPeriod: true } },
+  user: { select: { id: true, name: true, email: true, houseNumber: true } },
+};

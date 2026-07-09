@@ -4,7 +4,6 @@ import { StatusCodes } from "http-status-codes";
 import { validate } from "../../validations/validation";
 import { FeeValidation } from "./fee.validation";
 
-console.log("[FEE_CONTROLLER] file loaded");
 
 export class FeeController {
   static async getFeeTypes(_req: Request, res: Response) {

@@ -1,6 +1,5 @@
-console.log("[FEE_SELECT] file loaded");
 
-export const feeTypeSelect = {
+export const FeeTypeSelect = {
   id: true,
   createdBy: true,
   name: true,

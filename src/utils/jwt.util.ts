@@ -23,7 +23,7 @@ export class JWTUtil {
     });
   }
 
-  static verifyToken(token: string) {
-    return jwt.verify(token, JWT_SECRET_KEY!);
+  static verifyToken(token: string, secretKey: string = JWT_SECRET_KEY!) {
+    return jwt.verify(token, secretKey);
   }
 }

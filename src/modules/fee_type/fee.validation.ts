@@ -1,8 +1,6 @@
 import * as zod from "zod";
 import { BillingPeriod } from "../../../generated/prisma";
 
-console.log("[FEE_VALIDATION] file loaded");
-
 
 export class FeeValidation {
   static readonly CREATE = zod.object({

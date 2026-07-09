@@ -1,0 +1,42 @@
+// import morgan, { StreamOptions } from "morgan";
+// import { Request, RequestHandler } from "express";
+// import { logger } from "../configs/logger.config";
+// import { JWTUtil } from "../utils/jwt.util";
+// import "dotenv/config";
+// import { JWT_SECRET_KEY } from "../configs/env.config";
+
+// export class MorganMiddleware {
+//   private static readonly format =
+//     ":method :url :status :res[content-length] - :response-time ms - user::user-id";
+
+//   private static readonly stream: StreamOptions = {
+//     write: (message) => logger.http(message.trim()),
+//   };
+
+//   private static skip(): boolean {
+//     const env = process.env.NODE_ENV || "development";
+//     return env === "test";
+//   }
+
+//   private static registerTokens(): void {
+//     morgan.token("user-id", (req: Request) => {
+//       const cookies = req?.cookies;
+
+//       const payload = JWTUtil.verifyToken(
+//         cookies?.token?.token,
+//         JWT_SECRET_KEY!,
+//       );
+
+//       return typeof payload.sub === "string" ? payload.sub : "guest";
+//     });
+//   }
+
+//   static handler(): RequestHandler {
+//     MorganMiddleware.registerTokens();
+
+//     return morgan(MorganMiddleware.format, {
+//       stream: MorganMiddleware.stream,
+//       skip: MorganMiddleware.skip,
+//     });
+//   }
+// }

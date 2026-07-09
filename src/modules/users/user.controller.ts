@@ -14,13 +14,12 @@ export class UserController {
 
     const { query } = validate(UserValidation.LIST_QUERY, { query: req.query });
     console.log("[USER_CONTROLLER][GET_USERS] Query setelah validasi:", query);
-    const { users, meta } = await UserService.getUsers({ query });
+    const result = await UserService.getUsers({ query });
 
     res.status(StatusCodes.OK).json({
       success: true,
       message: "List data users berhasil diterima!",
-      data: users,
-      meta,
+      data: result,
     });
   }
 

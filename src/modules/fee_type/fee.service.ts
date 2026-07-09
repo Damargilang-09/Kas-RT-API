@@ -1,5 +1,5 @@
 import { prisma } from "../../configs/prisma-client.config";
-import { feeTypeSelect } from "./fee.select";
+import { FeeTypeSelect } from "./fee.select";
 import type {
   CreateFeeTypeInput,
   DeleteFeeTypeInput,
@@ -9,7 +9,7 @@ import type {
 import { ResponseError } from "../../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
 
-export type feeTypePayload = {
+export type FeeTypePayload = {
   id: string;
   role: string;
 };
@@ -18,7 +18,7 @@ export class FeeService {
   static async getFeeTypes() {
     const feeTypes = await prisma.feeType.findMany({
       where: { deletedAt: null },
-      select: feeTypeSelect,
+      select: FeeTypeSelect,
       orderBy: { name: "asc" },
     });
 
@@ -27,7 +27,7 @@ export class FeeService {
 
   static async createFeeType(
     { body }: CreateFeeTypeInput,
-    payload: feeTypePayload,
+    payload: FeeTypePayload,
   ) {
     const existingFeeType = await prisma.feeType.findFirst({
       where: { name: body.name, deletedAt: null },
@@ -49,7 +49,7 @@ export class FeeService {
         billingPeriod: body.billingPeriod,
         dueDay: body.dueDay ?? null,
       },
-      select: feeTypeSelect,
+      select: FeeTypeSelect,
     });
 
     return feeType;
@@ -58,7 +58,7 @@ export class FeeService {
   static async getFeeTypeDetail({ params }: FeeTypeDetailInput) {
     const feeTypeDetail = await prisma.feeType.findFirst({
       where: { id: params.id, deletedAt: null },
-      select: feeTypeSelect,
+      select: FeeTypeSelect,
     });
 
     if (!feeTypeDetail) {
@@ -75,7 +75,7 @@ export class FeeService {
     params,
     body,
     payload,
-  }: UpdateFeeTypeInput & { payload: feeTypePayload }) {
+  }: UpdateFeeTypeInput & { payload: FeeTypePayload }) {
     const existingFeeType = await prisma.feeType.findFirst({
       where: { id: params.id, deletedAt: null },
     });
@@ -101,13 +101,13 @@ export class FeeService {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // arsipkan feeType lama (soft delete)
+      // versioningnya di sini, jadi ini nambahin deletedAt
       await tx.feeType.update({
         where: { id: params.id },
         data: { deletedAt: new Date() },
       });
 
-      // buat feeType baru sebagai versi terbaru
+      // terus tinggal buat iuran baru.
       const newFeeType = await tx.feeType.create({
         data: {
           createdBy: payload.id,
@@ -121,7 +121,7 @@ export class FeeService {
           dueDay:
             body.dueDay !== undefined ? body.dueDay : existingFeeType.dueDay,
         },
-        select: feeTypeSelect,
+        select: FeeTypeSelect,
       });
 
       return newFeeType;
@@ -145,7 +145,7 @@ export class FeeService {
     const deletedFeeType = await prisma.feeType.update({
       where: { id: params.id },
       data: { deletedAt: new Date() },
-      select: feeTypeSelect,
+      select: FeeTypeSelect,
     });
 
     return deletedFeeType;
