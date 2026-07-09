@@ -8,6 +8,7 @@ import {
 } from "./income.validation";
 import { AllListQueryInput } from "../../validation/queryValidation";
 import { Prisma } from "../../../generated/prisma";
+import { Result } from "pg";
 
 export class IncomeService {
   static async create({ body }: IncomeCreateInput) {
@@ -144,18 +145,34 @@ export class IncomeService {
         "Pengajuan ini sudah diproses sebelumnya dan tidak dapat diubah kembali",
       );
 
-    const approveIncome = await prisma.income.update({
-      where: { id: findIncome.id },
-      data: {
-        approved_by: body.status === "rejected" ? (body.userId ?? null) : null,
-        rejected_reason:
-          body.status === "rejected" ? (body.rejected_reason ?? null) : null,
-        approved_at: body.status === "approved" ? new Date() : null,
-        status: body.status,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const approveIncome = await tx.income.update({
+        where: { id: findIncome.id },
+        data: {
+          approved_by:
+            body.status === "approved" ? (body.userId ?? null) : null,
+          rejected_reason:
+            body.status === "rejected" ? (body.rejected_reason ?? null) : null,
+          approved_at: body.status === "approved" ? new Date() : null,
+          status: body.status,
+        },
+      });
+
+      if (body.status === "approved")
+        await tx.cashTransaction.create({
+          data: {
+            amount: findIncome.amount,
+            sourceId: findIncome.id,
+            sourceType: "income",
+            type: "income",
+            periodMonth: new Date().getMonth() + 1,
+            periodYear: new Date().getFullYear(),
+          },
+        });
+      return approveIncome;
     });
 
-    const { created_by, approved_by, ...formattedIncome } = approveIncome;
+    const { id, created_by, approved_by, ...formattedIncome } = result;
 
     return formattedIncome;
   }
