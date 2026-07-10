@@ -22,7 +22,7 @@ export class UserService {
     const take = query.limit;
 
     const where: Prisma.UserWhereInput = {
-      deletedAt: null,
+      deleted_at: null,
     };
 
     if (query.search) {
@@ -97,7 +97,7 @@ search dan lainnya sama kek di List.
 
   static async getUserDetail({ params }: UserDetailInput) {
     const user = await prisma.user.findFirst({
-      where: { id: params.id, deletedAt: null },
+      where: { id: params.id, deleted_at: null },
       select: userSafeSelect,
     });
 
@@ -109,7 +109,7 @@ search dan lainnya sama kek di List.
 
   static async updateUser({ params, body }: UserUpdateInput) {
     const existingUser = await prisma.user.findFirst({
-      where: { id: params.id, deletedAt: null },
+      where: { id: params.id, deleted_at: null },
     });
 
     if (!existingUser) {
@@ -125,7 +125,7 @@ search dan lainnya sama kek di List.
         );
       }
     }
-//
+    //
     const updateData: Prisma.UserUpdateInput = {};
 
     if (body.status) {
@@ -144,7 +144,7 @@ search dan lainnya sama kek di List.
 
       return updatedUser;
     });
-//
+    //
     const statusBefore = existingUser.status;
     const statusAfter = userAfterUpdate.status;
 
@@ -152,7 +152,7 @@ search dan lainnya sama kek di List.
       statusBefore !== UserStatus.active && statusAfter === UserStatus.active;
 
     if (userJustActive) {
-      await MailService.accountActivated({
+      await MailService.sendAccountActivated({
         id: userAfterUpdate.id,
         name: userAfterUpdate.name,
         email: userAfterUpdate.email,

@@ -17,12 +17,15 @@ export class AuthService {
     const existingEmail = await prisma.user.findUnique({
       where: { email: body.email },
     });
+
     if (existingEmail) {
       throw new ResponseError(StatusCodes.CONFLICT, "Email sudah terdaftar!");
     }
+
     const existingHouse = await prisma.user.findUnique({
       where: { houseNumber: body.houseNumber },
     });
+
     if (existingHouse) {
       throw new ResponseError(
         StatusCodes.CONFLICT,
@@ -32,34 +35,32 @@ export class AuthService {
 
     const passwordHashed = await BcryptUtil.hash(body.password);
 
-    const safeUser = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name: body.name,
-          email: body.email,
-          passwordHash: passwordHashed,
-          role: UserRole.warga,
-          houseNumber: body.houseNumber,
-          address: body.address,
-          status: UserStatus.inactive,
-        },
-      });
-
-      await MailService.registerWaiting(
-        {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
-        // tx,
-      );
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { passwordHash, ...userNoPassword } = user;
-      return userNoPassword
+    const user = await prisma.user.create({
+      data: {
+        name: body.name,
+        email: body.email,
+        passwordHash: passwordHashed,
+        role: UserRole.warga,
+        houseNumber: body.houseNumber,
+        address: body.address,
+        status: UserStatus.inactive,
+      },
     });
 
-    return safeUser
+    try {
+      await MailService.sendRegisterWaitingActivation({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      });
+    } catch (error) {
+      console.error("Gagal mengirim email registrasi:", error);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...userNoPassword } = user;
+
+    return userNoPassword;
   }
 
   static async login({ body }: AuthLoginRequest) {
@@ -74,7 +75,7 @@ export class AuthService {
       );
     }
 
-    if (existingUser.deletedAt) {
+    if (existingUser.deleted_at) {
       throw new ResponseError(
         StatusCodes.FORBIDDEN,
         "Akun anda sudah tidak aktif",
@@ -114,7 +115,7 @@ export class AuthService {
     const user = await prisma.user.findFirst({
       where: {
         id: userId,
-        deletedAt: null,
+        deleted_at: null,
       },
       select: {
         id: true,

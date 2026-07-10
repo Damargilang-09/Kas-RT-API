@@ -3,6 +3,7 @@ export const billSelect = {
   feeTypeId: true,
   userId: true,
   billCode: true,
+  batchId: true,
   amount: true,
   periodYear: true,
   periodMonth: true,

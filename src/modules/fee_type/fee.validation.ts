@@ -1,18 +1,13 @@
 import * as zod from "zod";
 import { BillingPeriod } from "../../../generated/prisma";
 
-
 export class FeeValidation {
   static readonly CREATE = zod.object({
     body: zod.object({
       name: zod.string().trim().min(1, "Nama jenis tagihan wajib diisi"),
       amount: zod.coerce.number().positive("Nominal harus lebih dari 0"),
       description: zod.string().trim().optional(),
-      billingPeriod: zod.enum([
-        BillingPeriod.monthly,
-        BillingPeriod.weekly,
-        BillingPeriod.once,
-      ]),
+      billingPeriod: zod.enum([BillingPeriod.monthly, BillingPeriod.once]),
       dueDay: zod.coerce.number().int().min(1).max(31).optional(),
     }),
   });
@@ -33,11 +28,7 @@ export class FeeValidation {
         amount: zod.coerce.number().positive().optional(),
         description: zod.string().trim().optional(),
         billingPeriod: zod
-          .enum([
-            BillingPeriod.monthly,
-            BillingPeriod.once,
-            BillingPeriod.weekly,
-          ])
+          .enum([BillingPeriod.monthly, BillingPeriod.once])
           .optional(),
         dueDay: zod.coerce.number().int().min(1).max(31).optional(),
       })

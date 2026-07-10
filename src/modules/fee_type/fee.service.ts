@@ -1,4 +1,5 @@
 import { prisma } from "../../configs/prisma-client.config";
+
 import { FeeTypeSelect } from "./fee.select";
 import type {
   CreateFeeTypeInput,
@@ -17,7 +18,7 @@ export type FeeTypePayload = {
 export class FeeService {
   static async getFeeTypes() {
     const feeTypes = await prisma.feeType.findMany({
-      where: { deletedAt: null },
+      where: { deleted_at: null },
       select: FeeTypeSelect,
       orderBy: { name: "asc" },
     });
@@ -30,7 +31,7 @@ export class FeeService {
     payload: FeeTypePayload,
   ) {
     const existingFeeType = await prisma.feeType.findFirst({
-      where: { name: body.name, deletedAt: null },
+      where: { name: body.name, deleted_at: null },
     });
 
     if (existingFeeType) {
@@ -42,7 +43,7 @@ export class FeeService {
 
     const feeType = await prisma.feeType.create({
       data: {
-        createdBy: payload.id,
+        createdById: payload.id,
         name: body.name,
         amount: body.amount,
         description: body.description ?? null,
@@ -57,7 +58,7 @@ export class FeeService {
 
   static async getFeeTypeDetail({ params }: FeeTypeDetailInput) {
     const feeTypeDetail = await prisma.feeType.findFirst({
-      where: { id: params.id, deletedAt: null },
+      where: { id: params.id, deleted_at: null },
       select: FeeTypeSelect,
     });
 
@@ -77,7 +78,7 @@ export class FeeService {
     payload,
   }: UpdateFeeTypeInput & { payload: FeeTypePayload }) {
     const existingFeeType = await prisma.feeType.findFirst({
-      where: { id: params.id, deletedAt: null },
+      where: { id: params.id, delete: null },
     });
 
     if (!existingFeeType) {
@@ -89,7 +90,7 @@ export class FeeService {
 
     if (body.name && body.name !== existingFeeType.name) {
       const duplicateFeeType = await prisma.feeType.findFirst({
-        where: { name: body.name, deletedAt: null, NOT: { id: params.id } },
+        where: { name: body.name, deleted_at: null, NOT: { id: params.id } },
       });
 
       if (duplicateFeeType) {
@@ -104,13 +105,13 @@ export class FeeService {
       // versioningnya di sini, jadi ini nambahin deletedAt
       await tx.feeType.update({
         where: { id: params.id },
-        data: { deletedAt: new Date() },
+        data: { deleted_at: new Date() },
       });
 
       // terus tinggal buat iuran baru.
       const newFeeType = await tx.feeType.create({
         data: {
-          createdBy: payload.id,
+          createdById: payload.id,
           name: body.name ?? existingFeeType.name,
           amount: body.amount ?? existingFeeType.amount,
           description:
@@ -132,7 +133,7 @@ export class FeeService {
 
   static async deleteFeeType({ params }: DeleteFeeTypeInput) {
     const existingFeeType = await prisma.feeType.findFirst({
-      where: { id: params.id, deletedAt: null },
+      where: { id: params.id, deleted_at: null },
     });
 
     if (!existingFeeType) {
@@ -144,7 +145,7 @@ export class FeeService {
 
     const deletedFeeType = await prisma.feeType.update({
       where: { id: params.id },
-      data: { deletedAt: new Date() },
+      data: { deleted_at: new Date() },
       select: FeeTypeSelect,
     });
 

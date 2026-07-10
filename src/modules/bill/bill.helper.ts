@@ -17,3 +17,21 @@ export function makeBillCode(params: {
 
   return billCode;
 }
+
+export function makeBillBatchId(params: {
+  periodYear?: number | null;
+  periodMonth?: number | null;
+  feeTypeId: string;
+}) {
+  const period =
+    params.periodYear && params.periodMonth
+      ? `${params.periodYear}${String(params.periodMonth).padStart(2, "0")}`
+      : "ONCE";
+
+  const fee = params.feeTypeId.slice(0, 4).toUpperCase();
+  const randomNumber = Math.random().toString(16).slice(2, 8).toUpperCase();
+
+  const batchId = `BATCH-${period}-${fee}-${randomNumber}`;
+
+  return batchId;
+}
