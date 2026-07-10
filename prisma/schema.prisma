@@ -242,6 +242,7 @@ model Reports {
   period_month                     Int
   period_year                      Int
   status                           ReportStatus @default(open)
+  rejected_reason                  String?      @db.Text
   opening_balance                  Decimal      @default(0) @db.Decimal(15, 2)
   total_income                     Decimal      @default(0) @db.Decimal(15, 2)
   total_expense                    Decimal      @default(0) @db.Decimal(15, 2)
@@ -254,6 +255,7 @@ model Reports {
   users_reports_created_byTousers  User?        @relation("reports_created_byTousers", fields: [created_by], references: [id])
 
   @@unique([period_month, period_year])
+  @@index([status])
   @@index([period_year, period_month])
 }
 

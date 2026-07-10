@@ -195,7 +195,7 @@ export class IncomeService {
 
     await prisma.income.update({
       where: { id: findIncome.id },
-      data: { deleted_at: null },
+      data: { deleted_at: new Date() },
     });
   }
 }

@@ -4,7 +4,7 @@ import { MulterMiddleware } from "../../middlewares/multer.midleware";
 
 const router = Router();
 
-const MAX_FILE_SIZE = 6 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const multerUploads = new MulterMiddleware(
   ["image/jpeg", "image/png", "image/webp","image/jpg"],'memoryStorage'
 ).upload(MAX_FILE_SIZE);

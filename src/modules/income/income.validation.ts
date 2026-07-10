@@ -43,7 +43,7 @@ export class IncomeValidation {
         .min(1, "rejected reason is required field")
         .optional(),
       status: z.enum([ApprovalStatus.approved, ApprovalStatus.rejected], {
-        error: "expenses status is invalid",
+        error: "Income status is invalid",
       }),
     }),
   });

@@ -127,10 +127,10 @@ export class PaymentServices {
       };
     }
 
-    if (query.year) {
-      where.createdAt = {
-        gte: new Date(`${query.year}-01-01`),
-        lt: new Date(`${query.year + 1}-01-01`),
+    if (query.year && query.month) {
+      where.paidAt = {
+        gte: new Date(query.year, query.month - 1, 1),
+        lt: new Date(query.year, query.month, 1),
       };
     }
 
@@ -226,7 +226,8 @@ export class PaymentServices {
         where: { id: params.id, deleted_at: null },
         data: {
           status: body.status,
-          approved_by: body.status === "approved" ? (body.userId ?? null) : null,
+          approved_by:
+            body.status === "approved" ? (body.userId ?? null) : null,
           rejectedReason:
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
         },
