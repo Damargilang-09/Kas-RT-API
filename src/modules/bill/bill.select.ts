@@ -15,3 +15,25 @@ export const billSelect = {
   feeType: { select: { id: true, name: true, billingPeriod: true } },
   user: { select: { id: true, name: true, email: true, houseNumber: true } },
 };
+
+export const myBillDetailSelect = {
+  ...billSelect,
+  payments: {
+    where: {
+      deleted_at: null,
+    },
+    orderBy: {
+      createdAt: "desc" as const,
+    },
+    select: {
+      id: true,
+      amount: true,
+      paymentMethod: true,
+      paidAt: true,
+      status: true,
+      rejectedReason: true,
+      payment_proof_img: true,
+      createdAt: true,
+    },
+  },
+};

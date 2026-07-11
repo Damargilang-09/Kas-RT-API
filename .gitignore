@@ -22,4 +22,5 @@ generated/
 *.prettierrc
 
 *.mjs
-
+*.txt
+*.py

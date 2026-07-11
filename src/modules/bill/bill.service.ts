@@ -12,7 +12,7 @@ import {
   UserStatus,
 } from "../../../generated/prisma";
 import { makeBillBatchId, makeBillCode } from "./bill.helper";
-import { billSelect } from "./bill.select";
+import { billSelect, myBillDetailSelect } from "./bill.select";
 import { MailService } from "../mail/mail.service";
 import type {
   BillDetailInput,
@@ -413,7 +413,7 @@ export class BillService {
   }: MyBillDetailInput & { payload: BillPayload }) {
     const myBillDetail = await prisma.bill.findFirst({
       where: { id: params.id, userId: payload.id, deleted_at: null },
-      select: billSelect,
+      select: myBillDetailSelect,
     });
 
     if (!myBillDetail) {

@@ -1,8 +1,4 @@
-import type {
-  Request,
-  Response,
-  NextFunction,
-} from "express";
+import type { Request, Response, NextFunction } from "express";
 
 import { StatusCodes } from "http-status-codes";
 import { ZodError } from "zod";
@@ -14,8 +10,6 @@ export const ErrorMiddleware = (
   res: Response,
   __: NextFunction,
 ) => {
-  // console.error(err);
-
   if (err instanceof ZodError) {
     const firstError = err.issues[0];
 

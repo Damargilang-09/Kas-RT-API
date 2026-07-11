@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { ResponseError } from "../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
 import { JWTUtil } from "../utils/jwt.util";
-import { UserRole, UserStatus } from "../../../generated/prisma";
+import { UserRole, UserStatus } from "../../generated/prisma";
 import { prisma } from "../configs/prisma-client.config";
 
 export class AuthMiddleware {
