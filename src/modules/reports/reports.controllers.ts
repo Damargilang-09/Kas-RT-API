@@ -2,10 +2,8 @@ import { Request, Response } from "express";
 import { ReportsServices } from "./reports.services";
 import { StatusCodes } from "http-status-codes";
 import { ReportsValidation } from "./reports.validation";
-import { validate } from "../../validation/validation";
-import { ResponseError } from "../../utils/response-error.utils";
-import { date } from "zod";
-
+import { validate } from "../../validations/validation";
+import { ResponseError } from "../../utils/response-error.util";
 export class ReportsController {
   static async dashboard(req: Request, res: Response) {
     const result = await ReportsServices.dashboard();
@@ -87,7 +85,7 @@ export class ReportsController {
       params: req.params,
     });
 
-    await ReportsServices.delete({params})
+    await ReportsServices.delete({ params });
 
     res.status(StatusCodes.OK).json({
       success: true,

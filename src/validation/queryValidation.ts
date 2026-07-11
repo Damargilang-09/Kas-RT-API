@@ -36,3 +36,8 @@ export class QueryValidation {
 }
 
 export type AllListQueryInput = z.infer<typeof QueryValidation.LIST_QUERY>;
+
+export type userPayload = {
+  id: string;
+  role: string;
+};

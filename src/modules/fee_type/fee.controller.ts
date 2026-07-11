@@ -4,7 +4,6 @@ import { StatusCodes } from "http-status-codes";
 import { validate } from "../../validations/validation";
 import { FeeValidation } from "./fee.validation";
 
-
 export class FeeController {
   static async getFeeTypes(_req: Request, res: Response) {
     const feeTypeList = await FeeService.getFeeTypes();

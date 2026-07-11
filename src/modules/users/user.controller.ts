@@ -8,8 +8,6 @@ import { ResponseError } from "../../utils/response-error.util";
 
 export class UserController {
   static async getUsers(req: Request, res: Response) {
-
-
     const { query } = validate(UserValidation.LIST_QUERY, { query: req.query });
 
     const result = await UserService.getUsers({ query });
@@ -22,10 +20,7 @@ export class UserController {
   }
 
   static async getUserDetail(req: Request, res: Response) {
-
-
     const { params } = validate(UserValidation.DETAIL, { params: req.params });
-
 
     const user = await UserService.getUserDetail({ params });
 
@@ -37,13 +32,10 @@ export class UserController {
   }
 
   static async updateUser(req: Request, res: Response) {
-
-
     const { params, body } = validate(UserValidation.UPDATE, {
       params: req.params,
       body: req.body,
     });
- 
 
     const payloadCheck = res.locals.payload;
     if (payloadCheck.id === params.id) {

@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../../configs/prisma-client.config";
-import { ResponseError } from "../../utils/response-error.utils";
+import { ResponseError } from "../../utils/response-error.util";
 import {
   ExpensesApprovingInput,
   ExpensesCreateInput,

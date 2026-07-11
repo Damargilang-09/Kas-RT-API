@@ -4,7 +4,6 @@ import { BillValidation } from "./bill.validation";
 import { BillService } from "./bill.service";
 import { StatusCodes } from "http-status-codes";
 
-
 export class BillController {
   static async generateBills(req: Request, res: Response) {
     const { body } = validate(BillValidation.GENERATE, {

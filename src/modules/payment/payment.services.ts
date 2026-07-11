@@ -4,16 +4,21 @@ import {
   PaymentCreateInput,
   PaymentDetailInput,
 } from "./payment.validations";
-import { ResponseError } from "../../utils/response-error.utils";
+import { ResponseError } from "../../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
 import { Prisma } from "../../../generated/prisma";
 import { CloudinaryUtil } from "../../utils/cloudinary.utils";
-import { AllListQueryInput } from "../../validation/queryValidation";
+import {
+  AllListQueryInput,
+  userPayload,
+} from "../../validation/queryValidation";
+import { error } from "node:console";
 
 export class PaymentServices {
   static async create(
     { params, body }: PaymentCreateInput,
     file: Express.Multer.File,
+    payload: userPayload,
   ) {
     //todo ubah menjadi findfirst dan tambahkan deletedAt
     const findBill = await prisma.bill.findFirst({
@@ -27,7 +32,7 @@ export class PaymentServices {
         "Tagihan tidak ditemukan!",
       );
 
-    if (body.userId !== findBill.userId)
+    if (findBill.userId !== payload.id)
       throw new ResponseError(
         StatusCodes.CONFLICT,
         "anda tidak dapat melakukan pembayaran ini",
@@ -73,7 +78,7 @@ export class PaymentServices {
         const createdPayment = await tx.payment.create({
           data: {
             billId: findBill.id,
-            userId: body.userId,
+            userId: payload.id,
             amount: findBill.amount,
             payment_proof_img: uploadedImage,
             paymentMethod: body.paymentMethod ?? null,
@@ -209,8 +214,55 @@ export class PaymentServices {
       feeTypeName: findPayment.bill.feeType.name,
     };
   }
+  static async grtByUserId(payload: userPayload, { query }: AllListQueryInput) {
+    const skip = (query.page - 1) * query.limit;
+    const take = query.limit;
 
-  static async approve({ params, body }: PaymentApprovalInput) {
+    const where: Prisma.PaymentWhereInput = {
+      userId: payload.id,
+      deleted_at: null,
+    };
+
+    const [payment, totalPayment] = await Promise.all([
+      await prisma.payment.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: { select: { name: true } },
+          bill: { select: { feeType: { select: { name: true } } } },
+        },
+      }),
+      await prisma.payment.count({ where }),
+    ]);
+
+    const formattedPayments = payment.map((payment) => ({
+      id: payment.id,
+      billId: payment.billId,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      paidAt: payment.paidAt,
+      status: payment.status,
+      userName: payment.user.name,
+      feeTypeName: payment.bill.feeType.name,
+    }));
+
+    return {
+      formattedPayments,
+      meta: {
+        page: query.page,
+        limit: take,
+        totalData: totalPayment,
+        totalPage: Math.ceil(totalPayment / take),
+      },
+    };
+  }
+
+  static async approve(
+    { params, body }: PaymentApprovalInput,
+    payload: userPayload,
+  ) {
     const findPayment = await prisma.payment.findUnique({
       where: { id: params.id, deleted_at: null },
     });
@@ -221,13 +273,18 @@ export class PaymentServices {
         "Tagihan tidak di temukan !",
       );
 
+    if (findPayment.status !== "pending")
+      throw new ResponseError(
+        StatusCodes.NOT_FOUND,
+        "Pembayaran ini sudah diproses sebelumnya dan tidak dapat diubah kembali!",
+      );
+
     const result = await prisma.$transaction(async (tx) => {
       const updatedPayment = await tx.payment.update({
         where: { id: params.id, deleted_at: null },
         data: {
           status: body.status,
-          approved_by:
-            body.status === "approved" ? (body.userId ?? null) : null,
+          approved_by: body.status === "approved" ? (payload.id ?? null) : null,
           rejectedReason:
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
         },
@@ -258,16 +315,22 @@ export class PaymentServices {
     return formattedPayment;
   }
 
-  static async delete({ params }: PaymentDetailInput) {
+  static async delete({ params }: PaymentDetailInput, payload: userPayload) {
     const payment = await prisma.payment.findUnique({
       where: { id: params.id, deleted_at: null },
     });
-
     if (!payment)
       throw new ResponseError(
         StatusCodes.NOT_FOUND,
         "Pembayaran tidak ditemukan",
       );
+
+    if (payment?.userId !== payload.id)
+      throw new ResponseError(
+        StatusCodes.CONFLICT,
+        "Anda tidak dapat menghapus riwayat ini",
+      );
+
 
     if (payment.payment_proof_img) {
       const publicId = CloudinaryUtil.extractPublicId(

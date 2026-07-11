@@ -8,7 +8,6 @@ export class PaymentValidation {
       billId: z.string().uuid("format id tagihan invalid"),
     }),
     body: z.object({
-      userId: z.string().uuid("format user id invalid"),
       paymentMethod: z.string().trim().min(1, "Sertakan metode pembayaran").max(25).optional(),
     }),
   });
@@ -24,7 +23,6 @@ export class PaymentValidation {
       id: z.string().uuid("format id pembayaran invalid"),
     }),
     body: z.object({
-      userId: z.string().uuid("format user id invalid"),
       status: z.enum([ApprovalStatus.approved, ApprovalStatus.rejected], {
         error: "status is invalid",
       }),

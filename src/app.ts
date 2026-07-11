@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
 import routes from "./routes";
-import { ErrorMiddleware } from "./middlewares/error-handler.midleware";
+import { ErrorMiddleware } from "./middlewares/error.middleware";
 import { API_PREFIX, NODE_ENV, PORT, WHITE_LIST } from "./configs/env.config";
 import cors from "cors";
 import path from "path";

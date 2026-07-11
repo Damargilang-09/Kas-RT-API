@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../../configs/prisma-client.config";
 import { CloudinaryUtil } from "../../utils/cloudinary.utils";
 import { getCurrentPeriod, getPreviousPeriod } from "../../utils/date.utils";
-import { ResponseError } from "../../utils/response-error.utils";
+import { ResponseError } from "../../utils/response-error.util";
 import {
   ReportApprovalInput,
   ReportCreateInput,

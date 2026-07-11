@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
-import { ResponseError } from "../../utils/response-error.util";
+import { ResponseError } from "../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
-import { JWTUtil } from "../../utils/jwt.util";
+import { JWTUtil } from "../utils/jwt.util";
 
 export class AuthMiddleware {
   static authenticated(req: Request, res: Response, next: NextFunction) {

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IncomeValidation } from "./income.validation";
-import { validate } from "../../validation/validation";
+import { validate } from "../../validations/validation";
 import { IncomeService } from "./income.services";
 import { StatusCodes } from "http-status-codes";
 import { QueryValidation } from "../../validation/queryValidation";

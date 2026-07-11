@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../../configs/prisma-client.config";
-import { ResponseError } from "../../utils/response-error.utils";
+import { ResponseError } from "../../utils/response-error.util";
 import {
   ApprovalIncomeInput,
   DetailIncomeInput,
@@ -142,7 +142,7 @@ export class IncomeService {
     if (findIncome.status !== "pending")
       throw new ResponseError(
         StatusCodes.CONFLICT,
-        "Pengajuan ini sudah diproses sebelumnya dan tidak dapat diubah kembali",
+        "Pengajuan ini sudah diproses sebelumnya dan tidak dapat diubah kembali!",
       );
 
     const result = await prisma.$transaction(async (tx) => {

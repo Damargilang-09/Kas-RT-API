@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { validate } from "../../validation/validation";
+import { validate } from "../../validations/validation";
 import { ExpensesValidation } from "./expenses.validation";
 import { ExpensesService } from "./expenses.services";
 import { StatusCodes } from "http-status-codes";
@@ -11,7 +11,7 @@ export class ExpensesController {
     const { body } = validate(ExpensesValidation.CREATE_EXPENSES, {
       body: req.body,
     });
-    
+
     const files: Express.Multer.File[] = Array.isArray(req.files)
       ? req.files
       : [];

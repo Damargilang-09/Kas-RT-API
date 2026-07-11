@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { AuthMiddleware } from "../auth/auth.middleware";
+import { AuthMiddleware } from "../../middlewares/auth.middleware";
 import { UserRole } from "../../../generated/prisma";
 import { FeeController } from "./fee.controller";
 
