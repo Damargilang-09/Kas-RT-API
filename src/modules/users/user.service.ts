@@ -3,7 +3,7 @@ import type {
   UserListQueryInput,
   UserUpdateInput,
 } from "./user.validation";
-import { Prisma, UserStatus } from "../../../generated/prisma";
+import { Prisma, UserRole, UserStatus } from "../../../generated/prisma";
 import { prisma } from "../../configs/prisma-client.config";
 import { ResponseError } from "../../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
@@ -22,7 +22,7 @@ export class UserService {
     const take = query.limit;
 
     const where: Prisma.UserWhereInput = {
-      deleted_at: null,
+      deleted_at: null, role:{in:[UserRole.bendahara,UserRole.warga]}
     };
 
     if (query.search) {
@@ -97,7 +97,11 @@ search dan lainnya sama kek di List.
 
   static async getUserDetail({ params }: UserDetailInput) {
     const user = await prisma.user.findFirst({
-      where: { id: params.id, deleted_at: null },
+      where: {
+        id: params.id,
+        deleted_at: null,
+        role: { in: [UserRole.bendahara, UserRole.warga] },
+      },
       select: userSafeSelect,
     });
 
@@ -109,7 +113,11 @@ search dan lainnya sama kek di List.
 
   static async updateUser({ params, body }: UserUpdateInput) {
     const existingUser = await prisma.user.findFirst({
-      where: { id: params.id, deleted_at: null },
+      where: {
+        id: params.id,
+        deleted_at: null,
+        role: { in: [UserRole.bendahara, UserRole.warga] },
+      },
     });
 
     if (!existingUser) {

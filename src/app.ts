@@ -38,6 +38,7 @@ app.use(ErrorMiddleware);
 
 if (process.env.NODE_ENV === "development") {
   app.listen(PORT, () => {
+    // eslint-disable-next-line no-console
     console.log(`[APP] Application is running on port: ${PORT}`);
   });
 }

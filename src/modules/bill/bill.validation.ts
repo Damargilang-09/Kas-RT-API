@@ -1,6 +1,7 @@
 import * as zod from "zod";
 import { BillStatus } from "../../../generated/prisma";
 
+
 export class BillValidation {
   static readonly GENERATE = zod.object({
     body: zod.object({

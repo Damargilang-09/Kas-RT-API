@@ -6,17 +6,6 @@ import { StatusCodes } from "http-status-codes";
 
 export class AuthController {
   static async register(req: Request, res: Response) {
-    console.log("USER REGISTER REQUEST:", {
-      method: req.method,
-      url: req.originalUrl,
-      body: {
-        email: req.body.email,
-        password: req.body?.password
-          ? "Password Diterima"
-          : "Password Tidak Ditemukan",
-      },
-    });
-
     const { body } = validate(AuthValidation.REGISTER_USER, { body: req.body });
 
     const safeUser = await AuthService.register({ body });
@@ -29,17 +18,6 @@ export class AuthController {
   }
 
   static async login(req: Request, res: Response) {
-    console.log("USER LOGIN REQUEST:", {
-      method: req.method,
-      url: req.originalUrl,
-      body: {
-        email: req.body.email,
-        password: req.body?.password
-          ? "Password Diterima"
-          : "Password Tidak Ditemukan",
-      },
-    });
-
     const { body } = validate(AuthValidation.LOGIN_USER, { body: req.body });
 
     const { safeUser, token } = await AuthService.login({ body });
@@ -71,7 +49,7 @@ export class AuthController {
     });
   }
 
-  static async logout(req: Request, res: Response) {
+  static async logout(_req: Request, res: Response) {
     res.clearCookie("token", {
       httpOnly: true,
       // secure:true, jangan lupa diganti kalo udah production

@@ -6,7 +6,6 @@ import { JWTUtil } from "../../utils/jwt.util";
 export class AuthMiddleware {
   static authenticated(req: Request, res: Response, next: NextFunction) {
     const token = req.cookies?.token;
-    console.log("Token from COOKIE:", token);
 
     if (!token) {
       throw new ResponseError(
@@ -16,7 +15,7 @@ export class AuthMiddleware {
     }
 
     const payload = JWTUtil.verifyToken(token);
-    console.log("JWT PAYLOAD:", payload);
+
     res.locals.payload = payload;
 
     next();
@@ -26,8 +25,7 @@ export class AuthMiddleware {
     return (req: Request, res: Response, next: NextFunction) => {
       const payload = res.locals.payload;
 
-      console.log("ALLOWED ROLES:", allowedRoles);
-      console.log("USER ROLE:", payload?.role);
+
 
       if (!payload.role || !allowedRoles.includes(payload.role)) {
         throw new ResponseError(

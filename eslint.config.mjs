@@ -1,25 +1,26 @@
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import typescriptEslint from "@typescript-eslint/eslint-plugin";
+import typescriptParser from "@typescript-eslint/parser";
 
-export default tseslint.config(
-  eslint.configs.recommended,
-  ...tseslint.configs.recommended,
+export default [
   {
+    ignores: ["node_modules/**", "dist/**", "build/**"],
+  },
+  {
+    files: ["src/**/*.ts", "src/**/*.js"],
     languageOptions: {
+      parser: typescriptParser,
       parserOptions: {
-        project: './tsconfig.json', // ⚠️ WAJIB: Menghubungkan ESLint dengan TypeScript Anda
-        tsconfigRootDir: import.meta.dirname,
+        ecmaVersion: "latest",
+        sourceType: "module",
       },
     },
-    rules: {
-      // 1. Mengingatkan variabel / import yang tidak terpakai
-      '@typescript-eslint/no-unused-vars': ['warn', { 
-        'argsIgnorePattern': '^_', // Abaikan parameter diawali '_' seperti (_next) di Express
-        'varsIgnorePattern': '^_' 
-      }],
-      
-      // 2. Mengingatkan unhandled async error (Floating Promises) di Express rute
-      '@typescript-eslint/no-floating-promises': 'error',
+    plugins: {
+      "@typescript-eslint": typescriptEslint,
     },
-  }
-);
+    rules: {
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "no-console": "warn",
+    },
+  },
+];

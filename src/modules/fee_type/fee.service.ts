@@ -78,7 +78,7 @@ export class FeeService {
     payload,
   }: UpdateFeeTypeInput & { payload: FeeTypePayload }) {
     const existingFeeType = await prisma.feeType.findFirst({
-      where: { id: params.id, delete: null },
+      where: { id: params.id, deleted_at: null },
     });
 
     if (!existingFeeType) {

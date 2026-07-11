@@ -1,20 +1,42 @@
-import { Request, Response, NextFunction } from "express";
+import type {
+  Request,
+  Response,
+  NextFunction,
+} from "express";
+
 import { StatusCodes } from "http-status-codes";
+import { ZodError } from "zod";
+import { ResponseError } from "../utils/response-error.util";
 
 export const ErrorMiddleware = (
-  err: any,
+  err: unknown,
   _: Request,
   res: Response,
   __: NextFunction,
 ) => {
-  console.error(err);
+  // console.error(err);
 
-  const statusCode = err?.statusCode ?? StatusCodes.INTERNAL_SERVER_ERROR;
-  const message = err?.isExpose ? err.message : "Internal Server Error";
+  if (err instanceof ZodError) {
+    const firstError = err.issues[0];
 
-  res.status(statusCode).json({
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: firstError?.message ?? "Data tidak valid",
+      data: null,
+    });
+  }
+
+  if (err instanceof ResponseError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      data: null,
+    });
+  }
+
+  return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
-    message,
+    message: "Internal Server Error",
     data: null,
   });
 };

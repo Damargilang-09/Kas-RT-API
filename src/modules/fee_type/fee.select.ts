@@ -1,7 +1,6 @@
 
 export const FeeTypeSelect = {
   id: true,
-  createdBy: true,
   name: true,
   description: true,
   amount: true,
@@ -9,4 +8,5 @@ export const FeeTypeSelect = {
   dueDay: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: { select: { id: true, email: true, name: true } },
 };
