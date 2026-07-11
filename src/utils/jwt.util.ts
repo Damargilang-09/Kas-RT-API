@@ -7,23 +7,32 @@ import type { UserRole } from "../../generated/prisma";
 
 export interface JWTPayload {
   id: string;
-  role?: UserRole;
+  role: UserRole;
 }
 export class JWTUtil {
   static signToken(payload: JWTPayload) {
     if (!JWT_SECRET_KEY) {
       throw new ResponseError(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "JWT_SECRET_KEY is not configured",
+        "JWT_SECRET_KEY belum dikonfigurasi",
       );
     }
 
-    return jwt.sign({ ...payload }, JWT_SECRET_KEY! as string, {
+    return jwt.sign(payload, JWT_SECRET_KEY, {
       expiresIn: JWT_EXPIRES_IN! as StringValue,
     });
   }
 
-  static verifyToken(token: string, secretKey: string = JWT_SECRET_KEY!) {
-    return jwt.verify(token, secretKey);
+  static verifyToken(
+    token: string,
+    secretKey: string = JWT_SECRET_KEY!,
+  ): JWTPayload {
+    if (!secretKey) {
+      throw new ResponseError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "JWT_SECRET_KEY belum dikonfigurasi",
+      );
+    }
+    return jwt.verify(token, secretKey) as JWTPayload;
   }
 }

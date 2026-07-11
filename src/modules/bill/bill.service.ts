@@ -400,12 +400,9 @@ export class BillService {
       where: {
         userId: payload.id,
         deleted_at: null,
-        status: {
-          in: [BillStatus.pending, BillStatus.unpaid, BillStatus.overdue],
-        },
       },
       select: billSelect,
-      orderBy: { dueDate: "asc" },
+      orderBy: { dueDate: "desc" },
     });
     return getMyBills;
   }
