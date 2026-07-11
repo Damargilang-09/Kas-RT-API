@@ -14,3 +14,10 @@ generated/
 *.prettierrc
 
 *.mjs
+
+node_modules/
+dist/
+logs/
+.env
+.DS_Store
+.vscode/
