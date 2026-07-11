@@ -6,13 +6,12 @@ import {
 } from "./payment.validations";
 import { ResponseError } from "../../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
-import { Prisma } from "../../../generated/prisma";
+import { BillStatus, Prisma } from "../../../generated/prisma";
 import { CloudinaryUtil } from "../../utils/cloudinary.utils";
 import {
   AllListQueryInput,
   userPayload,
 } from "../../validation/queryValidation";
-import { error } from "node:console";
 
 export class PaymentServices {
   static async create(
@@ -75,6 +74,17 @@ export class PaymentServices {
 
     try {
       const { payment, bill } = await prisma.$transaction(async (tx) => {
+        
+        const updatedBill = await tx.bill.update({
+          where: { 
+            id: findBill.id,
+            userId: payload.id,
+            staus: BillStatus.unpaid
+          },
+          data: {
+            status: "pending",
+          },
+        });
         const createdPayment = await tx.payment.create({
           data: {
             billId: findBill.id,
@@ -82,14 +92,6 @@ export class PaymentServices {
             amount: findBill.amount,
             payment_proof_img: uploadedImage,
             paymentMethod: body.paymentMethod ?? null,
-            paidAt: new Date(),
-          },
-        });
-
-        const updatedBill = await tx.bill.update({
-          where: { id: findBill.id },
-          data: {
-            status: "pending",
             paidAt: new Date(),
           },
         });
@@ -280,8 +282,8 @@ export class PaymentServices {
       );
 
     const result = await prisma.$transaction(async (tx) => {
-      const updatedPayment = await tx.payment.update({
-        where: { id: params.id, deleted_at: null },
+      const updatedPayment = await tx.payment.updateMany({
+        where: { id: findPayment.id, deleted_at: null },
         data: {
           status: body.status,
           approved_by: body.status === "approved" ? (payload.id ?? null) : null,
@@ -291,9 +293,14 @@ export class PaymentServices {
       });
 
       await tx.bill.update({
-        where: { id: findPayment.billId },
+        where: { 
+          id: findPayment.billId,
+          userId: payload.id,
+          status: BillStatus.pending,
+        },
         data: {
           status: body.status === "rejected" ? "unpaid" : "paid",
+          paidAt: new Date()
         },
       });
 
@@ -311,12 +318,12 @@ export class PaymentServices {
       // const{userId,...formattedPayment} = updatedPayment
       return updatedPayment;
     });
-    const { userId, approved_by, ...formattedPayment } = result;
-    return formattedPayment;
+
+    return result;
   }
 
   static async delete({ params }: PaymentDetailInput, payload: userPayload) {
-    const payment = await prisma.payment.findUnique({
+    const payment = await prisma.payment.findFirst({
       where: { id: params.id, deleted_at: null },
     });
     if (!payment)
@@ -325,12 +332,17 @@ export class PaymentServices {
         "Pembayaran tidak ditemukan",
       );
 
+    if (payment.status !== "approved")
+      throw new ResponseError(
+        StatusCodes.CONFLICT,
+        "anda hanya bisa menghapus riwayat pembayaran yang berstatus paid.",
+      );
+
     if (payment?.userId !== payload.id)
       throw new ResponseError(
         StatusCodes.CONFLICT,
         "Anda tidak dapat menghapus riwayat ini",
       );
-
 
     if (payment.payment_proof_img) {
       const publicId = CloudinaryUtil.extractPublicId(

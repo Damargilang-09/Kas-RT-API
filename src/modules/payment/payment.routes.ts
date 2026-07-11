@@ -11,9 +11,9 @@ const multerUploads = new MulterMiddleware(
   ["image/jpeg", "image/png", "image/webp","image/jpg"],'memoryStorage'
 ).upload(MAX_FILE_SIZE);
 
-router.post("/:billId",multerUploads.single("PAYMENT_IMAGES"),AuthMiddleware.authenticated, PaymentController.create);
+router.post("/:billId",AuthMiddleware.authenticated,multerUploads.single("PAYMENT_IMAGES"), PaymentController.create);
 router.get("/",AuthMiddleware.authenticated,AuthMiddleware.authorized([UserRole.bendahara]), PaymentController.getAll);
-router.get("/detail/:id", PaymentController.getById);
+router.get("/detail/:id",AuthMiddleware.authenticated, PaymentController.getById);
 router.get("/transaction", AuthMiddleware.authenticated,PaymentController.getByUserId)
 router.patch("/:id",AuthMiddleware.authenticated,AuthMiddleware.authorized([UserRole.bendahara]), PaymentController.approve);
 router.delete("/:id",AuthMiddleware.authenticated, PaymentController.delete);

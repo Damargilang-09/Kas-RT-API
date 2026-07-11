@@ -9,7 +9,6 @@ import { QueryValidation } from "../../validation/queryValidation";
 export class PaymentController {
   static async create(req: Request, res: Response) {
     const payload = res.locals?.payload;
-    // TODO: ganti userId dari req.body ke req.user.id setelah authenticate middleware aktif
     const { params, body } = validate(PaymentValidation.CREATE_PAYMENT, {
       params: req.params,
       body: req.body,
@@ -62,7 +61,7 @@ export class PaymentController {
       data: findPayment,
     });
   }
-  //todo: buat get tagihan per user hanya milik user
+
   static async getByUserId(req: Request, res: Response) {
     const payload = res.locals.payload;
     const { query } = validate(QueryValidation.LIST_QUERY, {
@@ -89,7 +88,7 @@ export class PaymentController {
       body: req.body,
     });
 
-    const formattedPayment = await PaymentServices.approve(
+    const result = await PaymentServices.approve(
       { params, body },
       payload,
     );
@@ -97,7 +96,7 @@ export class PaymentController {
     res.status(StatusCodes.OK).json({
       success: true,
       message: "Approval berhasil dilakukan",
-      data: formattedPayment,
+      data: result,
     });
   }
 
