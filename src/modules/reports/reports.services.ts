@@ -5,12 +5,12 @@ import { getCurrentPeriod, getPreviousPeriod } from "../../utils/date.utils";
 import { ResponseError } from "../../utils/response-error.util";
 import {
   ReportApprovalInput,
-  ReportCreateInput,
   ReportDetailInput,
   ReportQueryInput,
 } from "./reports.validation";
 import { Prisma } from "../../../generated/prisma";
-import { stat } from "node:fs";
+import { userPayload } from "../../validation/queryValidation";
+import { AuditLogUtil } from "../../utils/auditLog.utils";
 
 export class ReportsServices {
   static async dashboard() {
@@ -68,8 +68,21 @@ export class ReportsServices {
     };
   }
 
-  static async create({ body }: ReportCreateInput, file: Express.Multer.File) {
+  static async create(file: Express.Multer.File, payload: userPayload) {
     const { month: currentMonth, year: currentYear } = getCurrentPeriod();
+
+    const findReport = await prisma.reports.findFirst({
+      where: {
+        period_month: currentMonth,
+        period_year: currentYear,
+      },
+    });
+
+    if (findReport)
+      throw new ResponseError(
+        StatusCodes.CONFLICT,
+        "Anda sudah melakukan pengajuan closing balance pada bulan ini.",
+      );
 
     const { month: prevMonth, year: prevYear } = getPreviousPeriod(
       currentMonth,
@@ -129,7 +142,7 @@ export class ReportsServices {
     try {
       const createdReport = await prisma.reports.create({
         data: {
-          created_by: body.userId,
+          created_by: payload.id,
           report_proof_img: uploadedImage,
           period_month: currentMonth,
           period_year: currentYear,
@@ -140,6 +153,22 @@ export class ReportsServices {
           last_calculated_at: new Date(),
         },
       });
+
+      await AuditLogUtil.record({
+        userId: payload.id,
+        action: "CREATE_REPORTS",
+        tableName: "reports",
+        recordId: createdReport.id,
+        oldValue: null,
+        newValue: {
+          opening_balance: createdReport,
+          total_income: createdReport,
+          total_expense: createdReport,
+          closing_balance: createdReport,
+          status: createdReport.status,
+        },
+      });
+
       const { created_by, ...formattedReports } = createdReport;
 
       return formattedReports;
@@ -168,28 +197,42 @@ export class ReportsServices {
       prisma.reports.findMany({
         where,
         skip,
-        orderBy: { created_at: "desc" },
-        include: {
-          users_reports_created_byTousers: { select: { name: true } },
-          users_reports_approved_byTousers: { select: { name: true } },
+        take,
+        orderBy: {
+          created_at: "desc",
+        },
+        select: {
+          id: true,
+          period_month: true,
+          period_year: true,
+          status: true,
+          opening_balance: true,
+          total_income: true,
+          total_expense: true,
+          closing_balance: true,
+          report_proof_img: true,
+          created_at: true,
+
+          users_reports_created_byTousers: {
+            select: {
+              name: true,
+            },
+          },
+
+          users_reports_approved_byTousers: {
+            select: {
+              name: true,
+            },
+          },
         },
       }),
+
       prisma.reports.count({ where }),
     ]);
-    const formattedReports = reports.map((reports) => ({
-      id: reports.id,
-      report_proof_img: reports.report_proof_img,
-      status: reports.status,
-      period_month: reports.period_month,
-      period_year: reports.period_year,
-      opening_balance: reports.opening_balance,
-      total_income: reports.total_income,
-      total_expense: reports.total_expense,
-      closing_balance: reports.closing_balance,
-    }));
+   
 
     return {
-      formattedReports,
+      reports,
       meta: {
         page: query.page,
         limit: take,
@@ -218,7 +261,10 @@ export class ReportsServices {
 
     return formattedReports;
   }
-  static async approval({ params, body }: ReportApprovalInput) {
+  static async approval(
+    { params, body }: ReportApprovalInput,
+    payload: userPayload,
+  ) {
     const findReport = await prisma.reports.findFirst({
       where: { id: params.id, deleted_at: null },
     });
@@ -238,10 +284,22 @@ export class ReportsServices {
     const approvalReports = await prisma.reports.update({
       where: { id: findReport.id },
       data: {
-        approved_by: body.status === "closed" ? (body.userId ?? null) : null,
+        approved_by: payload.id,
         rejected_reason:
           body.status === "failed" ? (body.rejected_reason ?? null) : null,
         status: body.status,
+      },
+    });
+
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: body.status === "closed" ? "CLOSED_REPORTS" : "FAILED_REPORTS",
+      tableName: "reports",
+      recordId: findReport.id,
+      oldValue: { status: "open" },
+      newValue: {
+        status: body.status,
+        rejectedreason: body.rejected_reason ?? null,
       },
     });
 
@@ -249,28 +307,120 @@ export class ReportsServices {
 
     return formattedReport;
   }
-  static async delete({ params }: ReportDetailInput) {
+
+  static async resubmission(
+    { params }: ReportDetailInput,
+    payload: userPayload,
+    file: Express.Multer.File,
+  ) {
     const findReport = await prisma.reports.findFirst({
-      where: { id: params.id, deleted_at: null },
-    });
-
-    if (!findReport)
-      throw new ResponseError(
-        StatusCodes.NOT_FOUND,
-        "Laporan keuangan tidak dapat ditemukan.",
-      );
-
-    if (findReport.status !== "open")
-      throw new ResponseError(
-        StatusCodes.NOT_FOUND,
-        "Hanya pengajuan dengan status open yang dapat dihapus",
-      );
-
-    await prisma.reports.update({
-      where: { id: findReport.id },
-      data: {
-        deleted_at: new Date(),
+      where: {
+        id: params.id,
+        status: "failed",
       },
     });
+
+    if (!findReport) {
+      throw new ResponseError(
+        StatusCodes.NOT_FOUND,
+        "Laporan keuangan tidak ditemukan.",
+      );
+    }
+
+    let uploadedImage: string | undefined;
+
+    try {
+      uploadedImage = await CloudinaryUtil.uploadStream(
+        file.buffer,
+        "payments",
+      );
+
+      const resubmission = await prisma.reports.update({
+        where: {
+          id: findReport.id,
+        },
+        data: {
+          report_proof_img: uploadedImage,
+          status: "open",
+        },
+      });
+
+      if (findReport.report_proof_img) {
+        const publicId = CloudinaryUtil.extractPublicId(
+          findReport.report_proof_img,
+        );
+
+        await CloudinaryUtil.delete([publicId]).catch((err) => {
+          console.error("Failed to delete old report image:", err);
+        });
+      }
+
+      await AuditLogUtil.record({
+        userId: payload.id,
+        action: "RESUBMIT_REPORT",
+        tableName: "reports",
+        recordId: resubmission.id,
+        oldValue: {
+          status: findReport.status,
+          report_proof_img: findReport.report_proof_img,
+        },
+        newValue: {
+          status: resubmission.status,
+          report_proof_img: uploadedImage,
+        },
+      }).catch((err) => {
+        console.error("Failed to create audit log:", err);
+      });
+
+      const { created_by, approved_by, ...formattedReports } = resubmission;
+
+      return formattedReports;
+    } catch (error) {
+      if (uploadedImage) {
+        const publicId = CloudinaryUtil.extractPublicId(uploadedImage);
+
+        await CloudinaryUtil.delete([publicId]).catch(() => {});
+      }
+
+      if (error instanceof ResponseError) {
+        throw error;
+      }
+
+      throw error;
+    }
   }
 }
+//   static async delete({ params }: ReportDetailInput, payload: userPayload) {
+//     const findReport = await prisma.reports.findFirst({
+//       where: { id: params.id, deleted_at: null },
+//     });
+
+//     if (!findReport)
+//       throw new ResponseError(
+//         StatusCodes.NOT_FOUND,
+//         "Laporan keuangan tidak dapat ditemukan.",
+//       );
+
+//     if (findReport.status !== "open")
+//       throw new ResponseError(
+//         StatusCodes.NOT_FOUND,
+//         "Hanya pengajuan dengan status open yang dapat dihapus",
+//       );
+
+//     await prisma.reports.update({
+//       where: { id: findReport.id },
+//       data: {
+//         deleted_at: new Date(),
+//       },
+//     });
+
+//     await AuditLogUtil.record({
+//       userId: payload.id,
+//       action: "DELETE_REPORT",
+//       tableName: "income",
+//       recordId: findReport.id,
+//       oldValue: { deleted_at: null },
+//       newValue: { deleted_at: new Date().toISOString() },
+//     });
+//   }
+// }

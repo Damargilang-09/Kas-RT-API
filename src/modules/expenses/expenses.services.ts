@@ -6,15 +6,19 @@ import {
   ExpensesCreateInput,
   ExpensesDetailInput,
 } from "./expenses.validation";
-import { AllListQueryInput } from "../../validation/queryValidation";
+import {
+  AllListQueryInput,
+  userPayload,
+} from "../../validation/queryValidation";
 import { Prisma } from "../../../generated/prisma";
 import { CloudinaryUtil } from "../../utils/cloudinary.utils";
+import { AuditLogUtil } from "../../utils/auditLog.utils";
 
 export class ExpensesService {
-  //TODO ini masih sementara menyisipkan user id lewat body karna belum di integrasikan dengan auth
   static async create(
     { body }: ExpensesCreateInput,
     files: Express.Multer.File[],
+    payload: userPayload,
   ) {
     const findExpense = await prisma.expense.findFirst({
       where: { expenseCode: body.expenseCode, deleted_at: null },
@@ -45,10 +49,10 @@ export class ExpensesService {
     }
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
+      const expenses = await prisma.$transaction(async (tx) => {
         const createdExpense = await tx.expense.create({
           data: {
-            requestedById: body.userId,
+            requestedById: payload.id,
             expenseCode: body.expenseCode,
             title: body.title,
             description: body.description,
@@ -63,19 +67,30 @@ export class ExpensesService {
           data: uploadedImages.map((url) => ({
             attachment_url: url,
             expenses_id: createdExpense.id,
-            created_by: body.userId,
+            created_by: payload.id,
           })),
         });
 
         return createdExpense;
       });
 
-      const{id,requestedById,approvedById,...formattedExpenses} = result
+      await AuditLogUtil.record({
+        userId: payload.id,
+        action: "CREATE_EXPENSES",
+        tableName: "expenses",
+        recordId: expenses.id,
+        oldValue: null,
+        newValue: {
+          amount: expenses.amount.toString(),
+          status: expenses.status,
+        },
+      });
+
+      const { id, requestedById, approvedById, ...formattedExpenses } =
+        expenses;
 
       return formattedExpenses;
-
     } catch (error) {
-      // rollback manual: hapus semua gambar yang udah kepalang ke-upload
       const publicIds = uploadedImages.map((url) =>
         CloudinaryUtil.extractPublicId(url),
       );
@@ -161,7 +176,9 @@ export class ExpensesService {
         AND: [{ id: params.id }, { deleted_at: null }],
       },
       include: {
-        expenses_images: { where: { deleted_at: null } },
+        expenses_images: {
+          where: { expenses_id: params.id, deleted_at: null },
+        },
         approvedBy: { select: { name: true } },
         requestedBy: { select: { name: true } },
       },
@@ -188,8 +205,11 @@ export class ExpensesService {
       requestedBy: findExpenses.requestedBy?.name,
     };
   }
-  static async approve({ params, body }: ExpensesApprovingInput) {
-    const findExpenses = await prisma.expense.findUnique({
+  static async approve(
+    { params, body }: ExpensesApprovingInput,
+    payload: userPayload,
+  ) {
+    const findExpenses = await prisma.expense.findFirst({
       where: {
         id: params.id,
         deleted_at: null,
@@ -206,12 +226,11 @@ export class ExpensesService {
         "Pengajuan ini sudah diproses sebelumnya dan tidak dapat diubah kembali",
       );
 
-    const result = await prisma.$transaction(async (tx) => {
+    const expenses = await prisma.$transaction(async (tx) => {
       const UpdateExpenses = await tx.expense.update({
         where: { id: findExpenses.id },
         data: {
-          approvedById:
-            body.status === "approved" ? (body.userId ?? null) : null,
+          approvedById: payload.id,
           approvedAt: body.status === "approved" ? new Date() : null,
           rejectedReason:
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
@@ -221,7 +240,7 @@ export class ExpensesService {
       await tx.expenses_images.updateMany({
         where: { expenses_id: params.id },
         data: {
-          approved_by: body.userId,
+          approved_by: payload.id,
           status: body.status,
         },
       });
@@ -240,11 +259,23 @@ export class ExpensesService {
       return UpdateExpenses;
     });
 
-const{id,approvedById,requestedById,...formattedExpenses} = result
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: body.status === "approved" ? "APPROVE_EXPENSES" : "REJECT_EXPENSES",
+      tableName: "expenses",
+      recordId: expenses.id,
+      oldValue: { status: "pending" },
+      newValue: {
+        status: body.status,
+        rejectedreason: body.rejectedReason ?? null,
+      },
+    });
+
+    const { id, approvedById, requestedById, ...formattedExpenses } = expenses;
 
     return formattedExpenses;
   }
-  static async delete({ params }: ExpensesDetailInput) {
+  static async delete({ params }: ExpensesDetailInput, payload:userPayload) {
     const findExpense = await prisma.expense.findUnique({
       where: {
         id: params.id,
@@ -289,6 +320,15 @@ const{id,approvedById,requestedById,...formattedExpenses} = result
         where: { expenses_id: params.id },
         data: { deleted_at: new Date() },
       });
+    });
+
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: "DELETE_EXPENSES",
+      tableName: "expenses",
+      recordId: findExpense.id,
+      oldValue: { deleted_at: null },
+      newValue: { deleted_at: new Date().toISOString() },
     });
   }
 }

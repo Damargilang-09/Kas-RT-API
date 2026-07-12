@@ -12,6 +12,7 @@ import {
   AllListQueryInput,
   userPayload,
 } from "../../validation/queryValidation";
+import { AuditLogUtil } from "../../utils/auditLog.utils";
 
 export class PaymentServices {
   static async create(
@@ -19,7 +20,6 @@ export class PaymentServices {
     file: Express.Multer.File,
     payload: userPayload,
   ) {
-    //todo ubah menjadi findfirst dan tambahkan deletedAt
     const findBill = await prisma.bill.findFirst({
       where: { id: params.billId, deleted_at: null },
       include: { feeType: { select: { name: true } } },
@@ -74,17 +74,17 @@ export class PaymentServices {
 
     try {
       const { payment, bill } = await prisma.$transaction(async (tx) => {
-        
         const updatedBill = await tx.bill.update({
-          where: { 
+          where: {
             id: findBill.id,
             userId: payload.id,
-            staus: BillStatus.unpaid
+            status: BillStatus.unpaid,
           },
           data: {
             status: "pending",
           },
         });
+
         const createdPayment = await tx.payment.create({
           data: {
             billId: findBill.id,
@@ -99,6 +99,19 @@ export class PaymentServices {
         return { payment: createdPayment, bill: updatedBill };
       });
 
+      await AuditLogUtil.record({
+        userId: payload.id,
+        action: "CREATE_PAYMENT",
+        tableName: "payments",
+        recordId: payment.id,
+        oldValue: null,
+        newValue: {
+          billId: payment.billId,
+          amount: payment.amount.toString(),
+          paymentMethod: payment.paymentMethod,
+          status: payment.status,
+        },
+      });
       return {
         id: payment.id,
         feeTypeName: findBill.feeType.name,
@@ -177,18 +190,9 @@ export class PaymentServices {
     };
   }
 
-  static async getById({ params }: PaymentDetailInput) {
+  static async getById({ params }: PaymentDetailInput, payload: userPayload) {
     const findPayment = await prisma.payment.findFirst({
-      where: {
-        AND: [
-          {
-            id: params.id,
-          },
-          {
-            deleted_at: null,
-          },
-        ],
-      },
+      where: { id: params.id, deleted_at: null },
       include: {
         users_payments_approved_byTousers: {
           select: { name: true },
@@ -204,19 +208,30 @@ export class PaymentServices {
         "Detail tagihan tidak dapat di temukan !",
       );
 
+    const isOwner = findPayment.userId === payload.id;
+    const isBendahara = payload.role === "bendahara";
+
+    const isAllowed = isOwner || isBendahara;
+    if (!isAllowed) {
+      throw new ResponseError(
+        StatusCodes.FORBIDDEN,
+        "Anda tidak memiliki akses untuk melihat detail pembayaran ini",
+      );
+    }
+
     return {
       id: findPayment.id,
       billId: findPayment.billId,
       amount: findPayment.amount,
       paymentMethod: findPayment.paymentMethod,
       paidAt: findPayment.paidAt,
-      paymentProff: findPayment.payment_proof_img,
+      paymentProof: findPayment.payment_proof_img,
       approvedBy: findPayment.users_payments_approved_byTousers?.name,
       userName: findPayment.user.name,
       feeTypeName: findPayment.bill.feeType.name,
     };
   }
-  static async grtByUserId(payload: userPayload, { query }: AllListQueryInput) {
+  static async getByUserId(payload: userPayload, { query }: AllListQueryInput) {
     const skip = (query.page - 1) * query.limit;
     const take = query.limit;
 
@@ -265,8 +280,9 @@ export class PaymentServices {
     { params, body }: PaymentApprovalInput,
     payload: userPayload,
   ) {
-    const findPayment = await prisma.payment.findUnique({
+    const findPayment = await prisma.payment.findFirst({
       where: { id: params.id, deleted_at: null },
+      include: { bill: { select: { periodMonth: true, periodYear: true } } },
     });
 
     if (!findPayment)
@@ -282,28 +298,26 @@ export class PaymentServices {
       );
 
     const result = await prisma.$transaction(async (tx) => {
-      const updatedPayment = await tx.payment.updateMany({
+      const updatedPayment = await tx.payment.update({
         where: { id: findPayment.id, deleted_at: null },
         data: {
           status: body.status,
-          approved_by: body.status === "approved" ? (payload.id ?? null) : null,
+          approved_by: payload.id,
           rejectedReason:
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
         },
       });
 
       await tx.bill.update({
-        where: { 
+        where: {
           id: findPayment.billId,
-          userId: payload.id,
           status: BillStatus.pending,
         },
         data: {
           status: body.status === "rejected" ? "unpaid" : "paid",
-          paidAt: new Date()
+          paidAt: body.status === "approved" ? new Date() : null,
         },
       });
-
       if (body.status === "approved")
         await tx.cashTransaction.create({
           data: {
@@ -311,15 +325,27 @@ export class PaymentServices {
             sourceId: findPayment.id,
             sourceType: "payment",
             type: "income",
-            periodMonth: new Date().getMonth() + 1,
-            periodYear: new Date().getFullYear(),
+            periodMonth: findPayment.bill.periodMonth,
+            periodYear: findPayment.bill.periodYear,
           },
         });
-      // const{userId,...formattedPayment} = updatedPayment
       return updatedPayment;
     });
 
-    return result;
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: body.status === "approved" ? "APPROVE_PAYMENT" : "REJECT_PAYMENT",
+      tableName: "payments",
+      recordId: findPayment.id,
+      oldValue: { status: "pending" },
+      newValue: {
+        status: body.status,
+        rejectedReason: body.rejectedReason ?? null,
+      },
+    });
+
+    const { userId, approved_by, ...formattedPayment } = result;
+    return formattedPayment;
   }
 
   static async delete({ params }: PaymentDetailInput, payload: userPayload) {
@@ -332,16 +358,16 @@ export class PaymentServices {
         "Pembayaran tidak ditemukan",
       );
 
+    if (payment?.userId !== payload.id)
+      throw new ResponseError(
+        StatusCodes.FORBIDDEN,
+        "Anda tidak dapat menghapus riwayat ini",
+      );
+
     if (payment.status !== "approved")
       throw new ResponseError(
         StatusCodes.CONFLICT,
-        "anda hanya bisa menghapus riwayat pembayaran yang berstatus paid.",
-      );
-
-    if (payment?.userId !== payload.id)
-      throw new ResponseError(
-        StatusCodes.CONFLICT,
-        "Anda tidak dapat menghapus riwayat ini",
+        "anda hanya bisa menghapus riwayat pembayaran yang berstatus approved.",
       );
 
     if (payment.payment_proof_img) {
@@ -354,6 +380,15 @@ export class PaymentServices {
     await prisma.payment.update({
       where: { id: params.id },
       data: { deleted_at: new Date() },
+    });
+
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: "DELETE_PAYMENT",
+      tableName: "payments",
+      recordId: payment.id,
+      oldValue: { deleted_at: null },
+      newValue: { deleted_at: new Date().toISOString() },
     });
   }
 }

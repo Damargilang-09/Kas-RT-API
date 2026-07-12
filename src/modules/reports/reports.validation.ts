@@ -2,12 +2,6 @@ import * as z from "zod";
 import { ReportStatus } from "../../../generated/prisma";
 
 export class ReportsValidation {
-  static readonly CREATE_REPORT = z.object({
-    body: z.object({
-      userId: z.string().uuid("format user id invalid"),
-    }),
-  });
-
   static readonly LIST_QUERY = z.object({
     query: z.object({
       page: z.coerce.number().int().min(1).default(1),
@@ -42,7 +36,6 @@ export class ReportsValidation {
       id: z.string().uuid("format id income invalid"),
     }),
     body: z.object({
-      userId: z.string().uuid("format userId salah"),
       rejected_reason: z
         .string()
         .min(1, "rejected reason is required field")
@@ -54,7 +47,7 @@ export class ReportsValidation {
   });
 }
 
-export type ReportCreateInput = z.infer<typeof ReportsValidation.CREATE_REPORT>;
+
 export type ReportQueryInput = z.infer<typeof ReportsValidation.LIST_QUERY>;
 export type ReportDetailInput = z.infer<typeof ReportsValidation.REPORT_DETAIL>;
 export type ReportApprovalInput = z.infer<

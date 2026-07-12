@@ -6,8 +6,8 @@ import { StatusCodes } from "http-status-codes";
 import { QueryValidation } from "../../validation/queryValidation";
 
 export class ExpensesController {
-  //TODO ini masih sementara menyisipkan user id lewat body karna belum di integrasikan dengan auth
   static async create(req: Request, res: Response) {
+    const payload = res.locals?.payload;
     const { body } = validate(ExpensesValidation.CREATE_EXPENSES, {
       body: req.body,
     });
@@ -16,7 +16,11 @@ export class ExpensesController {
       ? req.files
       : [];
 
-    const formattedExpenses = await ExpensesService.create({ body }, files);
+    const formattedExpenses = await ExpensesService.create(
+      { body },
+      files,
+      payload,
+    );
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -40,7 +44,6 @@ export class ExpensesController {
     });
   }
 
-  //todo: tambahkan get ke table expenses_images untuk mendapatkan semua gambar yang berhubungan dengan expensesId
   static async getById(req: Request, res: Response) {
     const { params } = validate(ExpensesValidation.EXPENSES_DETAIL, {
       params: req.params,
@@ -55,12 +58,13 @@ export class ExpensesController {
     });
   }
   static async approve(req: Request, res: Response) {
+    const payload = res.locals?.payload;
     const { params, body } = validate(ExpensesValidation.APPROVAL_EXPENSES, {
       params: req.params,
       body: req.body,
     });
 
-    const formattedExpenses = await ExpensesService.approve({ params, body });
+    const formattedExpenses = await ExpensesService.approve({ params, body },payload);
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -70,11 +74,12 @@ export class ExpensesController {
   }
 
   static async delete(req: Request, res: Response) {
+    const payload = res.locals?.payload
     const { params } = validate(ExpensesValidation.EXPENSES_DETAIL, {
       params: req.params,
     });
 
-    await ExpensesService.delete({ params });
+    await ExpensesService.delete({ params },payload);
 
     res.status(StatusCodes.OK).json({
       success: true,

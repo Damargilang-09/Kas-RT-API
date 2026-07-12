@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { ExpensesController } from "./expenses.controllers";
 import { MulterMiddleware } from "../../middlewares/multer.midleware";
+import { AuthMiddleware } from "../../middlewares/auth.middleware";
+import { UserRole } from "../../../generated/prisma";
 
 const router = Router();
 
@@ -11,10 +13,11 @@ const multerUploads = new MulterMiddleware(
   "memoryStorage",
 ).upload(MAX_FILE_SIZE);
 
-router.post("/",multerUploads.array("EXPENSES_IMAGES", 3),ExpensesController.create,);
-router.get("/", ExpensesController.getAll);
-router.get("/:id", ExpensesController.getById);
-router.patch("/:id", ExpensesController.approve);
-router.delete("/:id", ExpensesController.delete);
+
+router.post("/",AuthMiddleware.authenticated,AuthMiddleware.authorized([UserRole.bendahara]),multerUploads.array("EXPENSES_IMAGES", 3),ExpensesController.create);
+router.get("/",AuthMiddleware.authenticated ,ExpensesController.getAll);
+router.get("/:id",AuthMiddleware.authenticated, ExpensesController.getById);
+router.patch("/:id",AuthMiddleware.authenticated,AuthMiddleware.authorized([UserRole.ketuaRT]) ,ExpensesController.approve);
+router.delete("/:id", AuthMiddleware.authenticated,AuthMiddleware.authorized([UserRole.bendahara]),ExpensesController.delete);
 
 export default router;

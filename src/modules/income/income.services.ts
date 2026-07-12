@@ -6,12 +6,15 @@ import {
   DetailIncomeInput,
   IncomeCreateInput,
 } from "./income.validation";
-import { AllListQueryInput } from "../../validation/queryValidation";
+import {
+  AllListQueryInput,
+  userPayload,
+} from "../../validation/queryValidation";
 import { Prisma } from "../../../generated/prisma";
-import { Result } from "pg";
+import { AuditLogUtil } from "../../utils/auditLog.utils";
 
 export class IncomeService {
-  static async create({ body }: IncomeCreateInput) {
+  static async create({ body }: IncomeCreateInput, payload: userPayload) {
     const findIncome = await prisma.income.findFirst({
       where: { income_code: body.income_code },
     });
@@ -22,9 +25,9 @@ export class IncomeService {
         "Kode pencatatan income sudah digunakan",
       );
 
-    const createdIncome = await prisma.income.create({
+    const Income = await prisma.income.create({
       data: {
-        created_by: body.userId,
+        created_by: payload.id,
         income_code: body.income_code,
         title: body.title,
         description: body.description,
@@ -35,7 +38,21 @@ export class IncomeService {
       },
       include: { users: { select: { name: true } } },
     });
-    const { created_by, ...formattedIncome } = createdIncome;
+
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: "CREATE_INCOME",
+      tableName: "income",
+      recordId: Income.id,
+      oldValue: null,
+      newValue: {
+        amount: Income.amount.toString(),
+        status: Income.status,
+      },
+    });
+
+    const { created_by, ...formattedIncome } = Income;
+
     return formattedIncome;
   }
   static async getAll({ query }: AllListQueryInput) {
@@ -128,7 +145,7 @@ export class IncomeService {
 
     return safeIncome;
   }
-  static async approve({ params, body }: ApprovalIncomeInput) {
+  static async approve({ params, body }: ApprovalIncomeInput,payload:userPayload) {
     const findIncome = await prisma.income.findFirst({
       where: { id: params.id, deleted_at: null },
     });
@@ -149,8 +166,7 @@ export class IncomeService {
       const approveIncome = await tx.income.update({
         where: { id: findIncome.id },
         data: {
-          approved_by:
-            body.status === "approved" ? (body.userId ?? null) : null,
+          approved_by:payload.id,
           rejected_reason:
             body.status === "rejected" ? (body.rejected_reason ?? null) : null,
           approved_at: body.status === "approved" ? new Date() : null,
@@ -172,11 +188,23 @@ export class IncomeService {
       return approveIncome;
     });
 
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: body.status === "approved" ? "APPROVE_INCOME" : "REJECT_INCOME",
+      tableName: "expenses",
+      recordId: findIncome.id,
+      oldValue: { status: "pending" },
+      newValue: {
+        status: body.status,
+        rejectedreason: body.rejected_reason ?? null,
+      },
+    });
+
     const { id, created_by, approved_by, ...formattedIncome } = result;
 
     return formattedIncome;
   }
-  static async delete({ params }: DetailIncomeInput) {
+  static async delete({ params }: DetailIncomeInput,payload:userPayload) {
     const findIncome = await prisma.income.findFirst({
       where: { id: params.id, deleted_at: null },
     });
@@ -196,6 +224,15 @@ export class IncomeService {
     await prisma.income.update({
       where: { id: findIncome.id },
       data: { deleted_at: new Date() },
+    });
+
+    await AuditLogUtil.record({
+      userId: payload.id,
+      action: "DELETE_INCOME",
+      tableName: "income",
+      recordId: findIncome.id,
+      oldValue: { deleted_at: null },
+      newValue: { deleted_at: new Date().toISOString() },
     });
   }
 }

@@ -28,6 +28,8 @@ export const ErrorMiddleware = (
     });
   }
 
+ console.error(err);
+
   return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
     message: "Internal Server Error",

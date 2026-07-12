@@ -4,7 +4,6 @@ import { ApprovalStatus } from "../../../generated/prisma";
 export class IncomeValidation {
   static readonly CREATE_INCOME = z.object({
     body: z.object({
-      userId: z.string().uuid("format user id invalid"),
       income_code: z
         .string()
         .trim()
@@ -37,7 +36,6 @@ export class IncomeValidation {
       id: z.string().uuid("format id income invalid"),
     }),
     body: z.object({
-      userId: z.string().uuid("format userId salah"),
       rejected_reason: z
         .string()
         .min(1, "rejected reason is required field")

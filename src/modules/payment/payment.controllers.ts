@@ -49,11 +49,12 @@ export class PaymentController {
     });
   }
   static async getById(req: Request, res: Response) {
+    const payload = res.locals?.payload
     const { params } = validate(PaymentValidation.PAYMENT_DETAIL, {
       params: req.params,
     });
 
-    const findPayment = await PaymentServices.getById({ params });
+    const findPayment = await PaymentServices.getById({ params },payload);
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -68,7 +69,7 @@ export class PaymentController {
       query: req.query,
     });
 
-    const { formattedPayments, meta } = await PaymentServices.grtByUserId(
+    const { formattedPayments, meta } = await PaymentServices.getByUserId(
       payload,
       { query },
     );
@@ -88,7 +89,7 @@ export class PaymentController {
       body: req.body,
     });
 
-    const result = await PaymentServices.approve(
+    const formattedPayment = await PaymentServices.approve(
       { params, body },
       payload,
     );
@@ -96,7 +97,7 @@ export class PaymentController {
     res.status(StatusCodes.OK).json({
       success: true,
       message: "Approval berhasil dilakukan",
-      data: result,
+      data: formattedPayment,
     });
   }
 
