@@ -9,10 +9,16 @@ import path from "path";
 
 const app = express();
 
-
 app.use(
   cors({
-    origin: WHITE_LIST,
+    origin(origin, callback) {
+      if (!origin || WHITE_LIST.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -28,8 +34,7 @@ app.use(
   express.static(path.join(__dirname, "uploads")),
 );
 
-app.use(`${API_PREFIX}/api`, routes);
-
+app.use(API_PREFIX || "/api", routes);
 
 app.use(ErrorMiddleware);
 
