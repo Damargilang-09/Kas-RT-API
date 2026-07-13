@@ -48,7 +48,7 @@ export class FeeService {
         amount: body.amount,
         description: body.description ?? null,
         billingPeriod: body.billingPeriod,
-        dueDay: body.dueDay ?? null,
+        
       },
       select: FeeTypeSelect,
     });
@@ -119,8 +119,7 @@ export class FeeService {
               ? body.description
               : existingFeeType.description,
           billingPeriod: body.billingPeriod ?? existingFeeType.billingPeriod,
-          dueDay:
-            body.dueDay !== undefined ? body.dueDay : existingFeeType.dueDay,
+          
         },
         select: FeeTypeSelect,
       });

@@ -8,7 +8,7 @@ export class FeeValidation {
       amount: zod.coerce.number().positive("Nominal harus lebih dari 0"),
       description: zod.string().trim().optional(),
       billingPeriod: zod.enum([BillingPeriod.monthly, BillingPeriod.once]),
-      dueDay: zod.coerce.number().int().min(1).max(31).optional(),
+      
     }),
   });
 
@@ -30,7 +30,7 @@ export class FeeValidation {
         billingPeriod: zod
           .enum([BillingPeriod.monthly, BillingPeriod.once])
           .optional(),
-        dueDay: zod.coerce.number().int().min(1).max(31).optional(),
+        
       })
       .refine(
         (body) =>
@@ -38,7 +38,7 @@ export class FeeValidation {
           body.amount ||
           body.description ||
           body.billingPeriod ||
-          body.dueDay,
+          
         { message: "Minimal salah satu field harus diisi!" },
       ),
   });
