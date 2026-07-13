@@ -34,7 +34,7 @@ app.use(
   express.static(path.join(__dirname, "uploads")),
 );
 
-app.use(API_PREFIX || "/api", routes);
+app.use(`${API_PREFIX}/api`, routes);
 
 app.use(ErrorMiddleware);
 
