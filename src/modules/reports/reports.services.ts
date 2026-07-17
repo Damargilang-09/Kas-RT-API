@@ -201,18 +201,7 @@ export class ReportsServices {
         orderBy: {
           created_at: "desc",
         },
-        select: {
-          id: true,
-          period_month: true,
-          period_year: true,
-          status: true,
-          opening_balance: true,
-          total_income: true,
-          total_expense: true,
-          closing_balance: true,
-          report_proof_img: true,
-          created_at: true,
-
+        include: {
           users_reports_created_byTousers: {
             select: {
               name: true,
