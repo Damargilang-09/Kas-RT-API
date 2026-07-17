@@ -8,4 +8,4 @@ AuthRoutes.post("/register", AuthController.register);
 AuthRoutes.post("/login", AuthController.login);
 
 AuthRoutes.get("/me", AuthMiddleware.authenticated, AuthController.getMe);
-AuthRoutes.post("/logout", AuthMiddleware.authenticated, AuthController.logout);
+AuthRoutes.post("/logout",  AuthController.logout);

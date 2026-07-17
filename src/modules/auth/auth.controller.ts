@@ -3,6 +3,7 @@ import { validate } from "../../validations/validation";
 import { AuthValidation } from "./auth.validation";
 import { AuthService } from "./auth.service";
 import { StatusCodes } from "http-status-codes";
+import { NODE_ENV } from "../../configs/env.config";
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -24,9 +25,9 @@ export class AuthController {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
-      // secure:true, jangan lupa diganti kalo udah production
-      sameSite: true,
+      secure: NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -52,9 +53,9 @@ export class AuthController {
   static async logout(_req: Request, res: Response) {
     res.clearCookie("token", {
       httpOnly: true,
-      // secure:true, jangan lupa diganti kalo udah production
-      secure: false,
-      sameSite: true,
+      secure: NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
     });
 
     res.status(StatusCodes.OK).json({

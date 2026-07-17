@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { JWT_EXPIRES_IN, JWT_SECRET_KEY } from "../configs/env.config";
 import type { StringValue } from "ms";
 import { ResponseError } from "./response-error.util";
@@ -33,6 +33,23 @@ export class JWTUtil {
         "JWT_SECRET_KEY belum dikonfigurasi",
       );
     }
-    return jwt.verify(token, secretKey) as JWTPayload;
+    try {
+      return jwt.verify(token, secretKey) as JWTPayload;
+    } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        throw new ResponseError(
+          StatusCodes.UNAUTHORIZED,
+          "Sesi telah berakhir. Silahkan login kembali",
+        );
+      }
+
+      if (error instanceof JsonWebTokenError) {
+        throw new ResponseError(
+          StatusCodes.UNAUTHORIZED,
+          "Sesi tidak valid. Silahkan login kembali!",
+        );
+      }
+      throw error;
+    }
   }
 }
