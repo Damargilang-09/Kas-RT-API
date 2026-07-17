@@ -178,6 +178,7 @@ export class ExpensesService {
       include: {
         expenses_images: {
           where: { expenses_id: params.id, deleted_at: null },
+          select: { id: true, attachment_url: true },
         },
         approvedBy: { select: { name: true } },
         requestedBy: { select: { name: true } },
@@ -261,7 +262,8 @@ export class ExpensesService {
 
     await AuditLogUtil.record({
       userId: payload.id,
-      action: body.status === "approved" ? "APPROVE_EXPENSES" : "REJECT_EXPENSES",
+      action:
+        body.status === "approved" ? "APPROVE_EXPENSES" : "REJECT_EXPENSES",
       tableName: "expenses",
       recordId: expenses.id,
       oldValue: { status: "pending" },
@@ -275,7 +277,7 @@ export class ExpensesService {
 
     return formattedExpenses;
   }
-  static async delete({ params }: ExpensesDetailInput, payload:userPayload) {
+  static async delete({ params }: ExpensesDetailInput, payload: userPayload) {
     const findExpense = await prisma.expense.findUnique({
       where: {
         id: params.id,
