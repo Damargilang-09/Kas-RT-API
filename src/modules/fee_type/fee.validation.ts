@@ -4,11 +4,19 @@ import { BillingPeriod } from "../../../generated/prisma";
 export class FeeValidation {
   static readonly CREATE = zod.object({
     body: zod.object({
-      name: zod.string().trim().min(1, "Nama jenis tagihan wajib diisi"),
+      name: zod
+        .string()
+        .trim()
+        .min(1, "Nama jenis tagihan wajib diisi")
+        .max(150, "Nama jenis tagihan maksimal 150 karakter"),
       amount: zod.coerce.number().positive("Nominal harus lebih dari 0"),
       description: zod.string().trim().optional(),
       billingPeriod: zod.enum([BillingPeriod.monthly, BillingPeriod.once]),
-      
+      dueDay: zod.coerce
+        .number()
+        .int("Tanggal jatuh tempo harus berupa bilangan bulat")
+        .min(1, "Tanggal jatuh tempo minimal tanggal 1")
+        .max(31, "Tanggal jatuh tempo maksimal tanggal 31"),
     }),
   });
 
@@ -19,26 +27,36 @@ export class FeeValidation {
   });
 
   static readonly UPDATE = zod.object({
-    params: zod.object({
-      id: zod.string().min(1, "ID jenis tagihan wajib diisi"),
-    }),
-    body: zod
+    params: zod
       .object({
-        name: zod.string().trim().min(1).optional(),
-        amount: zod.coerce.number().positive().optional(),
+        name: zod
+          .string()
+          .trim()
+          .min(1, "Nama jenis tagihan wajib diisi")
+          .max(150, "Nama jenis tagihan maksimal 150 karakter")
+          .optional(),
+        amount: zod.coerce
+          .number()
+          .positive("Nominal harus lebih dari 0")
+          .optional(),
         description: zod.string().trim().optional(),
         billingPeriod: zod
           .enum([BillingPeriod.monthly, BillingPeriod.once])
           .optional(),
-        
+        dueDay: zod.coerce
+          .number()
+          .int("Tanggal jatuh tempo harus berupa bilangan bulat")
+          .min(1, "Tanggal jatuh tempo minimal tanggal 1")
+          .max(31, "Tanggal jatuh tempo maksimal tanggal 31")
+          .optional(),
       })
       .refine(
         (body) =>
-          body.name ||
-          body.amount ||
-          body.description ||
-          body.billingPeriod ||
-          
+          body.name !== undefined ||
+          body.amount !== undefined ||
+          body.description !== undefined ||
+          body.billingPeriod !== undefined ||
+          body.dueDay !== undefined,
         { message: "Minimal salah satu field harus diisi!" },
       ),
   });
