@@ -176,6 +176,7 @@ export class PaymentServices {
       paymentProof: payment.payment_proof_img,
       paidAt: payment.paidAt,
       status: payment.status,
+      rejectedReason: payment.rejectedReason,
       userName: payment.user.name,
       feeTypeName: payment.bill.feeType.name,
     }));
@@ -230,6 +231,7 @@ export class PaymentServices {
       status:findPayment.status,
       approvedBy: findPayment.users_payments_approved_byTousers?.name,
       userName: findPayment.user.name,
+      rejectedReason: findPayment.paymentMethod,
       feeTypeName: findPayment.bill.feeType.name,
     };
   }

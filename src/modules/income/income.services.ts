@@ -113,6 +113,7 @@ export class IncomeService {
       periodYear: income.periodYear,
       approve_at: income.approved_at,
       created_by: income.users?.name,
+      rejected_reason: income.rejected_reason,
       approvedByUser: income.approvedByUser?.name ?? null,
     }));
 
