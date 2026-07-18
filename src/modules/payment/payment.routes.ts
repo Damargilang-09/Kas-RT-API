@@ -8,7 +8,7 @@ const router = Router();
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const multerUploads = new MulterMiddleware(
-  ["image/jpeg", "image/png", "image/webp","image/jpg"],'memoryStorage'
+  ["image/jpeg", "image/png", "image/jpg","application/pdf"],'memoryStorage'
 ).upload(MAX_FILE_SIZE);
 
 router.post("/:billId",AuthMiddleware.authenticated,multerUploads.single("PAYMENT_IMAGES"), PaymentController.create);

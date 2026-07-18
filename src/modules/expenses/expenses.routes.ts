@@ -9,7 +9,7 @@ const router = Router();
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const multerUploads = new MulterMiddleware(
-  ["image/jpeg", "image/png", "image/webp"],
+  ["image/jpeg", "image/png", "image/jpg","application/pdf"],
   "memoryStorage",
 ).upload(MAX_FILE_SIZE);
 
