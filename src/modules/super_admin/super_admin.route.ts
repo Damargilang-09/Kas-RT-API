@@ -25,3 +25,10 @@ SuperAdminRoutes.patch(
   AuthMiddleware.authorized([UserRole.superAdmin]),
   SuperAdminController.updateKetua,
 );
+
+SuperAdminRoutes.patch(
+  "/user/:id/remove",
+  AuthMiddleware.authenticated,
+  AuthMiddleware.authorized([UserRole.superAdmin]),
+  SuperAdminController.removeKetua,
+);

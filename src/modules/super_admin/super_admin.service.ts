@@ -1,6 +1,7 @@
 import type {
   GetUserDetailInput,
   GetUserListInput,
+  RemoveKetuaRTInput,
   SuperAdminPayload,
   UpdateKetuaRTInput,
 } from "./super_admin.validation";
@@ -147,5 +148,55 @@ export class SuperAdminService {
       return newKetuaRT;
     });
     return updateUser;
+  }
+
+  static async removeKetua({
+    params,
+    payload,
+  }: RemoveKetuaRTInput & { payload: SuperAdminPayload }) {
+    const existingKetuaRT = await prisma.user.findFirst({
+      where: {
+        id: params.id,
+        role: UserRole.ketuaRT,
+        status: UserStatus.active,
+        deleted_at: null,
+      },
+    });
+
+    if (!existingKetuaRT) {
+      throw new ResponseError(
+        StatusCodes.NOT_FOUND,
+        "Ketua RT aktif tidak ditemukan",
+      );
+    }
+
+    const removedKetuaRT = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { id: existingKetuaRT.id },
+        data: { role: UserRole.warga },
+        select: superAdminUserSelect,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: payload.id,
+          action: "mencabut_ketuaRT_menjadi_warga",
+          tableName: "users",
+          recordId: existingKetuaRT.id,
+          oldValue: {
+            role: existingKetuaRT.role,
+            status: existingKetuaRT.status,
+          },
+          newValue: {
+            role: UserRole.warga,
+            status: existingKetuaRT.status,
+          },
+        },
+      });
+
+      return updatedUser;
+    });
+
+    return removedKetuaRT;
   }
 }

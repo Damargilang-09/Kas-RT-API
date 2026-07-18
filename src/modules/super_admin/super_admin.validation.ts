@@ -20,6 +20,8 @@ export class SuperAdminValidation {
   });
 
   static readonly UPDATE_KETUA = SuperAdminValidation.GET_DETAIL;
+
+  static readonly REMOVE_KETUA = SuperAdminValidation.GET_DETAIL;
 }
 
 export type GetUserListInput = zod.infer<
@@ -30,6 +32,9 @@ export type GetUserDetailInput = zod.infer<
 >;
 export type UpdateKetuaRTInput = zod.infer<
   typeof SuperAdminValidation.UPDATE_KETUA
+>;
+export type RemoveKetuaRTInput = zod.infer<
+  typeof SuperAdminValidation.REMOVE_KETUA
 >;
 export type SuperAdminPayload = {
   id: string;

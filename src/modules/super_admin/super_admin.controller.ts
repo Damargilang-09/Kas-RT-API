@@ -50,4 +50,22 @@ export class SuperAdminController {
       data: updateKetuaRT,
     });
   }
+
+  static async removeKetua(req: Request, res: Response) {
+    const { params } = validate(SuperAdminValidation.REMOVE_KETUA, {
+      params: req.params,
+    });
+    const payload = res.locals?.payload;
+
+    const removedKetuaRT = await SuperAdminService.removeKetua({
+      params,
+      payload,
+    });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Ketua RT berhasil dicabut tanpa pengganti",
+      data: removedKetuaRT,
+    });
+  }
 }
