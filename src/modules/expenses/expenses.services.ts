@@ -142,6 +142,9 @@ export class ExpensesService {
         include: {
           approvedBy: { select: { name: true } },
           requestedBy: { select: { name: true } },
+          expenses_images:{
+          select: {id:true, attachment_url: true },
+        },
         },
       }),
       prisma.expense.count({ where }),
@@ -157,6 +160,7 @@ export class ExpensesService {
       status: expense.status,
       approvedAt: expense.approvedAt,
       rejectedReason: expense.rejectedReason,
+      expenses_image: expense.expenses_images,
       approvedBy: expense.approvedBy?.name ?? null,
       requestedBy: expense.requestedBy.name,
     }));
