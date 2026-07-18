@@ -13,6 +13,7 @@ import {
   userPayload,
 } from "../../validation/queryValidation";
 import { AuditLogUtil } from "../../utils/auditLog.utils";
+import { isDueDatePassed } from "../bill/bill.helper";
 
 export class PaymentServices {
   static async create(
@@ -228,7 +229,7 @@ export class PaymentServices {
       paymentMethod: findPayment.paymentMethod,
       paidAt: findPayment.paidAt,
       paymentProof: findPayment.payment_proof_img,
-      status:findPayment.status,
+      status: findPayment.status,
       approvedBy: findPayment.users_payments_approved_byTousers?.name,
       userName: findPayment.user.name,
       rejectedReason: findPayment.paymentMethod,
@@ -266,7 +267,7 @@ export class PaymentServices {
       paidAt: payment.paidAt,
       status: payment.status,
       paymentProof: payment.payment_proof_img,
-      rejectedReason:payment.rejectedReason,
+      rejectedReason: payment.rejectedReason,
       userName: payment.user.name,
       feeTypeName: payment.bill.feeType.name,
     }));
@@ -288,7 +289,11 @@ export class PaymentServices {
   ) {
     const findPayment = await prisma.payment.findFirst({
       where: { id: params.id, deleted_at: null },
-      include: { bill: { select: { periodMonth: true, periodYear: true } } },
+      include: {
+        bill: {
+          select: { periodMonth: true, periodYear: true, dueDate: true },
+        },
+      },
     });
 
     if (!findPayment)
@@ -313,6 +318,9 @@ export class PaymentServices {
             body.status === "rejected" ? (body.rejectedReason ?? null) : null,
         },
       });
+      const rejectedBillStatus = isDueDatePassed(findPayment.bill.dueDate)
+        ? BillStatus.overdue
+        : BillStatus.unpaid;
 
       await tx.bill.update({
         where: {
@@ -320,7 +328,8 @@ export class PaymentServices {
           status: BillStatus.pending,
         },
         data: {
-          status: body.status === "rejected" ? "unpaid" : "paid",
+          status:
+            body.status === "rejected" ? rejectedBillStatus : BillStatus.paid,
           paidAt: body.status === "approved" ? new Date() : null,
         },
       });

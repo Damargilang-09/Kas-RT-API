@@ -6,6 +6,7 @@ import { ErrorMiddleware } from "./middlewares/error.middleware";
 import { API_PREFIX, NODE_ENV, PORT, WHITE_LIST } from "./configs/env.config";
 import cors from "cors";
 import path from "path";
+import { startBillOverdueCron } from "./modules/bill/bill.cron";
 
 const app = express();
 
@@ -37,6 +38,10 @@ app.use(
 app.use(`${API_PREFIX}/api`, routes);
 
 app.use(ErrorMiddleware);
+
+if (NODE_ENV === "development" || NODE_ENV === "production") {
+  startBillOverdueCron();
+}
 
 if (NODE_ENV === "development") {
   app.listen(PORT, () => {

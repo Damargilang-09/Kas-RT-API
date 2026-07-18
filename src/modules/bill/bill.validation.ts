@@ -1,14 +1,13 @@
 import * as zod from "zod";
 import { BillStatus } from "../../../generated/prisma";
 
-
 export class BillValidation {
   static readonly GENERATE = zod.object({
     body: zod.object({
       feeTypeId: zod.string().min(1, "Jenis tagihan wajib diisi"),
       periodMonth: zod.coerce.number().int().min(1).max(12).optional(),
       periodYear: zod.coerce.number().int().min(2000).optional(),
-      dueDate: zod.coerce.date(),
+      dueDate: zod.coerce.date().optional(),
     }),
   });
 

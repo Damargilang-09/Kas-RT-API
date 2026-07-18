@@ -11,7 +11,11 @@ import {
   UserRole,
   UserStatus,
 } from "../../../generated/prisma";
-import { makeBillBatchId, makeBillCode } from "./bill.helper";
+import {
+  makeBillBatchId,
+  makeBillCode,
+  calculateMonthlyDueDate,
+} from "./bill.helper";
 import { billSelect, myBillDetailSelect } from "./bill.select";
 import { MailService } from "../mail/mail.service";
 import type {
@@ -24,33 +28,59 @@ import type {
 } from "./bill.validation";
 
 export class BillService {
-  // Function GenerateBILL
-  static async generateBill({
-    body,
-    payload,
-  }: GenerateBillInput & { payload: BillPayload }) {
+  static async getFeeTypeForGenerate(feeTypeId: string) {
     const feeType = await prisma.feeType.findFirst({
-      where: {
-        id: body.feeTypeId,
-        deleted_at: null,
-      },
+      where: { id: feeTypeId, deleted_at: null },
     });
 
     if (!feeType) {
       throw new ResponseError(
         StatusCodes.NOT_FOUND,
-        "Jenis Tagihan Tidak Ditemukan",
+        "Jenis Tagihan Tidak Ditemukan!",
       );
     }
 
-    if (
-      feeType.billingPeriod === BillingPeriod.monthly &&
-      (!body.periodMonth || !body.periodYear)
-    ) {
-      throw new ResponseError(
-        StatusCodes.BAD_REQUEST,
-        "Bulan dan Tahun Periode Wajib untuk Iuran Bulanan",
-      );
+    return feeType;
+  }
+
+  // Function GenerateBILL
+  static async generateBill({
+    body,
+    payload,
+  }: GenerateBillInput & { payload: BillPayload }) {
+    const feeType = await BillService.getFeeTypeForGenerate(body.feeTypeId);
+
+    let dueDate: Date;
+
+    if (feeType.billingPeriod === BillingPeriod.monthly) {
+      if (!body.periodMonth || !body.periodYear) {
+        throw new ResponseError(
+          StatusCodes.BAD_REQUEST,
+          "BUlan dan Tahun Periode Wajib untuk Iuran Bulanan",
+        );
+      }
+
+      if (feeType.dueDay === null) {
+        throw new ResponseError(
+          StatusCodes.BAD_REQUEST,
+          "Tanggal jatuh tempo pada iuran bulanan belum ditentukan",
+        );
+      }
+
+      dueDate = calculateMonthlyDueDate({
+        periodMonth: body.periodMonth,
+        periodYear: body.periodYear,
+        dueDay: feeType.dueDay,
+      });
+    } else {
+      if (!body.dueDate) {
+        throw new ResponseError(
+          StatusCodes.BAD_REQUEST,
+          "Tanggal jatuh tempo wajib diisi untuk iuran sekali bayar",
+        );
+      }
+
+      dueDate = body.dueDate;
     }
 
     const periodMonth =
@@ -73,9 +103,7 @@ export class BillService {
       where: {
         status: UserStatus.active,
         deleted_at: null,
-        role: {
-          in: [UserRole.warga, UserRole.bendahara, UserRole.ketuaRT],
-        },
+        role: { in: [UserRole.warga, UserRole.bendahara, UserRole.ketuaRT] },
       },
       select: {
         id: true,
@@ -86,7 +114,7 @@ export class BillService {
 
     const createdItems = await prisma.$transaction(
       async (tx) => {
-        const results = [];
+        const result = [];
         let billNumber = 1;
         let skippedDuplicateCount = 0;
 
@@ -122,7 +150,7 @@ export class BillService {
               amount: feeType.amount,
               periodMonth,
               periodYear,
-              dueDate: body.dueDate,
+              dueDate,
               status: BillStatus.unpaid,
             },
             select: billSelect,
@@ -155,29 +183,22 @@ export class BillService {
             },
           });
 
-          results.push({ bill, mailerLog });
+          result.push({ bill, mailerLog });
           billNumber += 1;
         }
 
-        const result = {
-          items: results,
-          skippedDuplicateCount,
-        };
-
-        return result;
+        return { items: result, skippedDuplicateCount };
       },
-      {
-        maxWait: 10000,
-        timeout: 30000,
-      },
+      { maxWait: 10000, timeout: 30000 },
     );
 
     if (createdItems.items.length === 0) {
       throw new ResponseError(
         StatusCodes.BAD_REQUEST,
-        "Tidak ada tagihan baru yang dibuat. Semua target user sudah memiliki tagihan untuk periode ini.",
+        "Tidak ada tagihan baru yang dibuat. Semua target user sudah memiliki tagihan untuk periode ini",
       );
     }
+
     const bills = createdItems.items.map((item) => item.bill);
 
     const auditLog = await prisma.auditLog.create({
@@ -193,7 +214,7 @@ export class BillService {
           billingPeriod: feeType.billingPeriod,
           periodMonth,
           periodYear,
-          dueDate: body.dueDate.toISOString(),
+          dueDate: dueDate.toISOString(),
           targetUserCount: targetUsers.length,
           createdBillCount: bills.length,
           skippedDuplicateCount: createdItems.skippedDuplicateCount,
@@ -211,13 +232,7 @@ export class BillService {
       });
     }
 
-    const result = {
-      batchId,
-      bills,
-      auditLogId: auditLog.id,
-    };
-
-    return result;
+    return { batchId, bills, auditLogId: auditLog.id };
   }
 
   // Function GetBills

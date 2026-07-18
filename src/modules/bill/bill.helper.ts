@@ -35,3 +35,44 @@ export function makeBillBatchId(params: {
 
   return batchId;
 }
+
+export function calculateMonthlyDueDate(params: {
+  periodYear: number;
+  periodMonth: number;
+  dueDay: number;
+}) {
+  const lastDayOfMonth = new Date(
+    Date.UTC(params.periodYear, params.periodMonth, 0),
+  ).getUTCDate();
+
+  const finalDueDay = Math.min(params.dueDay, lastDayOfMonth);
+
+  return new Date(
+    Date.UTC(params.periodYear, params.periodMonth - 1, finalDueDay),
+  );
+}
+
+export function getJakartaDateParts(date = new Date()) {
+  const jakartaOffsetInMilliseconds = 7 * 60 * 60 * 1000;
+  const jakartaDate = new Date(date.getTime() + jakartaOffsetInMilliseconds);
+
+  return {
+    year: jakartaDate.getUTCFullYear(),
+    month: jakartaDate.getUTCMonth() + 1,
+    day: jakartaDate.getUTCDate(),
+    hour: jakartaDate.getUTCHours(),
+    minute: jakartaDate.getUTCMinutes(),
+  };
+}
+
+export function getJakartaStartOfToday(date = new Date()) {
+  const jakartaDate = getJakartaDateParts(date);
+
+  return new Date(
+    Date.UTC(jakartaDate.year, jakartaDate.month - 1, jakartaDate.day),
+  );
+}
+
+export function isDueDatePassed(dueDate: Date, date = new Date()) {
+  return dueDate < getJakartaStartOfToday(date);
+}
