@@ -48,7 +48,7 @@ export class FeeService {
         amount: body.amount,
         description: body.description ?? null,
         billingPeriod: body.billingPeriod,
-        
+        dueDay: body.billingPeriod === "monthly" ? (body.dueDay ?? null) : null,
       },
       select: FeeTypeSelect,
     });
@@ -101,6 +101,26 @@ export class FeeService {
       }
     }
 
+    const newBillingPeriod =
+      body.billingPeriod ?? existingFeeType.billingPeriod;
+
+    let newDueDay = existingFeeType.dueDay;
+
+    if (newBillingPeriod === "once") {
+      newDueDay = null;
+    }
+
+    if (newBillingPeriod === "monthly") {
+      newDueDay = body.dueDay ?? existingFeeType.dueDay;
+
+      if (newDueDay === null) {
+        throw new ResponseError(
+          StatusCodes.BAD_REQUEST,
+          "Tanggal jatuh tempo wajib diisi untuk iuran bulanan",
+        );
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // versioningnya di sini, jadi ini nambahin deletedAt
       await tx.feeType.update({
@@ -118,8 +138,8 @@ export class FeeService {
             body.description !== undefined
               ? body.description
               : existingFeeType.description,
-          billingPeriod: body.billingPeriod ?? existingFeeType.billingPeriod,
-          
+          billingPeriod: newBillingPeriod,
+          dueDay: newDueDay,
         },
         select: FeeTypeSelect,
       });
