@@ -37,20 +37,39 @@ export class UserController {
       body: req.body,
     });
 
-    const payloadCheck = res.locals.payload;
-    if (payloadCheck.id === params.id) {
+    const payload = res.locals.payload;
+    if (payload.id === params.id) {
       throw new ResponseError(
         StatusCodes.BAD_REQUEST,
         "Tidak boleh mengubah status atau role sendiri!",
       );
     }
 
-    const updateUser = await UserService.updateUser({ params, body });
+    const updateUser = await UserService.updateUser({ params, body,payload });
 
     res.status(StatusCodes.OK).json({
       success: true,
       message: "User berhasil di-update!",
       data: updateUser,
+    });
+  }
+
+  static async deleteUser(req: Request, res: Response) {
+    const { params } = validate(UserValidation.DELETE, { params: req.params });
+    const payload = res.locals.payload;
+
+    if (payload.id === params.id) {
+      throw new ResponseError(
+        StatusCodes.BAD_REQUEST,
+        "TIdak boleh menghapus akun sendiri!",
+      );
+    }
+    const deletedUser = await UserService.deleteUser({ params, payload });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "User berhasil dihapus!",
+      data: deletedUser,
     });
   }
 }

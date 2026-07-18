@@ -25,3 +25,10 @@ UserRoutes.patch(
   AuthMiddleware.authorized([UserRole.ketuaRT]),
   UserController.updateUser,
 );
+
+UserRoutes.delete(
+  "/:id",
+  AuthMiddleware.authenticated,
+  AuthMiddleware.authorized([UserRole.ketuaRT]),
+  UserController.deleteUser,
+);

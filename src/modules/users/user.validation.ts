@@ -31,8 +31,11 @@ export class UserValidation {
         message: "Minimal status atau role harus disi!",
       }),
   });
+
+  static readonly DELETE = UserValidation.DETAIL;
 }
 
 export type UserListQueryInput = zod.infer<typeof UserValidation.LIST_QUERY>;
 export type UserDetailInput = zod.infer<typeof UserValidation.DETAIL>;
 export type UserUpdateInput = zod.infer<typeof UserValidation.UPDATE>;
+export type UserDeleteInput = zod.infer<typeof UserValidation.DELETE>;

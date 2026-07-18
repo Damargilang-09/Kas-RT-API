@@ -1,4 +1,5 @@
 import type {
+  UserDeleteInput,
   UserDetailInput,
   UserListQueryInput,
   UserUpdateInput,
@@ -22,7 +23,8 @@ export class UserService {
     const take = query.limit;
 
     const where: Prisma.UserWhereInput = {
-      deleted_at: null, role:{in:[UserRole.bendahara,UserRole.warga]}
+      deleted_at: null,
+      role: { in: [UserRole.bendahara, UserRole.warga] },
     };
 
     if (query.search) {
@@ -111,7 +113,7 @@ search dan lainnya sama kek di List.
     return user;
   }
 
-  static async updateUser({ params, body }: UserUpdateInput) {
+  static async updateUser({ params, body,payload }: UserUpdateInput & {payload : {id:string}}) {
     const existingUser = await prisma.user.findFirst({
       where: {
         id: params.id,
@@ -150,6 +152,23 @@ search dan lainnya sama kek di List.
         select: userSafeSelect,
       });
 
+      await tx.auditLog.create({
+        data: {
+          userId: payload.id,
+          action: "update_user",
+          tableName: "users",
+          recordId: existingUser.id,
+          oldValue: {
+            role: existingUser.role,
+            status: existingUser.status,
+          },
+          newValue: {
+            role: updatedUser.role,
+            status: updatedUser.status,
+          },
+        },
+      });
+
       return updatedUser;
     });
     //
@@ -168,5 +187,61 @@ search dan lainnya sama kek di List.
     }
 
     return userAfterUpdate;
+  }
+
+  static async deleteUser({
+    params,
+    payload,
+  }: UserDeleteInput & { payload: { id: string } }) {
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        id: params.id,
+        deleted_at: null,
+        role: { in: [UserRole.warga, UserRole.bendahara] },
+      },
+    });
+
+    if (!existingUser) {
+      throw new ResponseError(StatusCodes.NOT_FOUND, "User tidak ditemukan");
+    }
+
+    const deletedAt = new Date();
+    const roleAfterDelete =
+      existingUser.role === UserRole.bendahara
+        ? UserRole.warga
+        : existingUser.role;
+
+    const deletedUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id: existingUser.id },
+        data: {
+          deleted_at: deletedAt,
+          status: UserStatus.inactive,
+          role: roleAfterDelete,
+        },
+        select: userSafeSelect,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: payload.id,
+          action: "soft_delete_user",
+          tableName: "users",
+          recordId: existingUser.id,
+          oldValue: {
+            role: existingUser.role,
+            status: existingUser.status,
+            deletedAt: null,
+          },
+          newValue: {
+            role: roleAfterDelete,
+            status: UserStatus.inactive,
+            deletedAt: deletedAt,
+          },
+        },
+      });
+      return user;
+    });
+    return deletedUser;
   }
 }
