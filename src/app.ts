@@ -43,10 +43,10 @@ if (NODE_ENV === "development" || NODE_ENV === "production") {
   startBillOverdueCron();
 }
 
-if (NODE_ENV === "development") {
-  app.listen(PORT, () => {
-    console.log(`[⚡APP] Application is running on port: ${PORT}`);
-  });
-}
+// if (NODE_ENV === "development") {
+//   app.listen(PORT, () => {
+//     console.log(`[⚡APP] Application is running on port: ${PORT}`);
+//   });
+// }
 
 export default app;
