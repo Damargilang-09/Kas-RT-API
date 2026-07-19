@@ -1,0 +1,92 @@
+import { Request, Response } from "express";
+import { validate } from "../../validations/validation";
+import { ExpensesValidation } from "./expenses.validation";
+import { ExpensesService } from "./expenses.services";
+import { StatusCodes } from "http-status-codes";
+import { QueryValidation } from "../../validations/queryValidation";
+
+export class ExpensesController {
+  static async create(req: Request, res: Response) {
+    const payload = res.locals?.payload;
+    const { body } = validate(ExpensesValidation.CREATE_EXPENSES, {
+      body: req.body,
+    });
+
+    const files: Express.Multer.File[] = Array.isArray(req.files)
+      ? req.files
+      : [];
+
+    const formattedExpenses = await ExpensesService.create(
+      { body },
+      files,
+      payload,
+    );
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      massage: `pencatatan pengeluaran ${formattedExpenses.title} dengan jumlah ${formattedExpenses.amount} berhasil dibuat. Status: Menunggu Persetujuan Ketua RT.`,
+      data: formattedExpenses,
+    });
+  }
+
+  static async getAll(req: Request, res: Response) {
+    const { query } = validate(QueryValidation.LIST_QUERY, {
+      query: req.query,
+    });
+
+    const { formattedExpenses, meta } = await ExpensesService.getAll({ query });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "histori pencatatan pengeluaran berahasil di dapatkan",
+      data: formattedExpenses,
+      meta,
+    });
+  }
+
+  static async getById(req: Request, res: Response) {
+    const { params } = validate(ExpensesValidation.EXPENSES_DETAIL, {
+      params: req.params,
+    });
+
+    const findExpenses = await ExpensesService.getById({ params });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: `detail catatan pengeluaran ${findExpenses.title} berhasil di dapatkan`,
+      data: findExpenses,
+    });
+  }
+  static async approve(req: Request, res: Response) {
+    const payload = res.locals?.payload;
+    const { params, body } = validate(ExpensesValidation.APPROVAL_EXPENSES, {
+      params: req.params,
+      body: req.body,
+    });
+
+    const formattedExpenses = await ExpensesService.approve(
+      { params, body },
+      payload,
+    );
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: `catatan pengeluaran ${formattedExpenses.title} berhasil di update`,
+      data: formattedExpenses,
+    });
+  }
+
+  static async delete(req: Request, res: Response) {
+    const payload = res.locals?.payload;
+    const { params } = validate(ExpensesValidation.EXPENSES_DETAIL, {
+      params: req.params,
+    });
+
+    await ExpensesService.delete({ params }, payload);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "pengajuan berhasil di hapus",
+    });
+  }
+}

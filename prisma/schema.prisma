@@ -21,19 +21,20 @@ model User {
   deleted_at                                         DateTime?
   role                                               UserRole          @default(warga)
   status                                             UserStatus        @default(inactive)
+  expenses_images_expenses_images_approved_byTousers Expenses_images[] @relation("expenses_images_approved_byTousers")
+  expenses_images_expenses_images_created_byTousers  Expenses_images[] @relation("expenses_images_created_byTousers")
+  income_income_approved_byTousers                   Income[]          @relation("income_approved_byTousers")
+  income_income_created_byTousers                    Income[]          @relation("income_created_byTousers")
+  reports_reports_approved_byTousers                 Reports[]         @relation("reports_approved_byTousers")
+  reports_reports_created_byTousers                  Reports[]         @relation("reports_created_byTousers")
   auditLogs                                          AuditLog[]
   bills                                              Bill[]
   approvedExpenses                                   Expense[]         @relation("ExpenseApprovedBy")
   requestedExpenses                                  Expense[]         @relation("ExpenseRequestedBy")
-  expenses_images_expenses_images_approved_byTousers expenses_images[] @relation("expenses_images_approved_byTousers")
-  expenses_images_expenses_images_created_byTousers  expenses_images[] @relation("expenses_images_created_byTousers")
   feeTypes                                           FeeType[]
-  income                                             income[]
   mailerLogs                                         MailerLog[]
   payments_payments_approved_byTousers               Payment[]         @relation("payments_approved_byTousers")
   payments                                           Payment[]
-  reports_reports_approved_byTousers                 reports[]         @relation("reports_approved_byTousers")
-  reports_reports_created_byTousers                  reports[]         @relation("reports_created_byTousers")
 
   @@map("users")
 }
@@ -49,6 +50,7 @@ model FeeType {
   updatedAt     DateTime      @updatedAt @map("updated_at")
   deleted_at    DateTime?
   billingPeriod BillingPeriod @default(once) @map("billing_period")
+ 
   bills         Bill[]
   createdBy     User          @relation(fields: [createdById], references: [id])
 
@@ -69,11 +71,13 @@ model Bill {
   updatedAt   DateTime   @updatedAt @map("updated_at")
   deleted_at  DateTime?
   status      BillStatus @default(unpaid)
+  batchId     String?    @map("batch_id") @db.VarChar(100)
   feeType     FeeType    @relation(fields: [feeTypeId], references: [id])
   user        User       @relation(fields: [userId], references: [id])
   payments    Payment[]
 
   @@unique([feeTypeId, userId, periodMonth, periodYear])
+  @@index([batchId])
   @@index([dueDate])
   @@index([feeTypeId])
   @@index([periodYear, periodMonth])
@@ -95,10 +99,12 @@ model Payment {
   deleted_at                        DateTime?
   payment_proof_img                 String?        @db.VarChar(255)
   status                            ApprovalStatus @default(pending)
+  rejectedReason                    String?        @map("rejected_reason") @db.VarChar(255)
   users_payments_approved_byTousers User?          @relation("payments_approved_byTousers", fields: [approved_by], references: [id])
   bill                              Bill           @relation(fields: [billId], references: [id])
   user                              User           @relation(fields: [userId], references: [id])
 
+  @@index([status])
   @@index([billId])
   @@index([paidAt])
   @@index([userId])
@@ -115,15 +121,19 @@ model Expense {
   amount          Decimal           @default(0) @db.Decimal(15, 2)
   expenseDate     DateTime          @map("expense_date") @db.Date
   approvedAt      DateTime?         @map("approved_at")
-  rejectedReason  String?           @map("rejected_reason")
+  rejectedReason  String?           @map("rejected_reason") @db.VarChar(255)
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
   deleted_at      DateTime?
   status          ApprovalStatus    @default(pending)
+  periodMonth     Int?              @map("period_month")
+  periodYear      Int?              @map("period_year")
+  expenses_images Expenses_images[]
   approvedBy      User?             @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
   requestedBy     User              @relation("ExpenseRequestedBy", fields: [requestedById], references: [id])
-  expenses_images expenses_images[]
 
+  
+  @@index([periodYear, periodMonth])
   @@index([approvedById])
   @@index([expenseDate])
   @@index([requestedById])
@@ -133,7 +143,6 @@ model Expense {
 
 model CashTransaction {
   id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transactionCode String           @unique @map("transaction_code") @db.VarChar(100)
   amount          Decimal          @default(0) @db.Decimal(15, 2)
   createdBySystem Boolean          @default(true) @map("created_by_system")
   createdAt       DateTime         @default(now()) @map("created_at")
@@ -141,7 +150,11 @@ model CashTransaction {
   sourceId        String           @map("source_id") @db.Uuid
   sourceType      String           @map("source_type")
   type            TransactionType?
+  periodMonth     Int?             @map("period_month")
+  periodYear      Int?             @map("period_year")
 
+  @@index([sourceId, sourceType]) 
+  @@index([periodYear, periodMonth])
   @@map("cash_transactions")
 }
 
@@ -173,33 +186,30 @@ model AuditLog {
   recordId  String?  @map("record_id") @db.Uuid
   oldValue  Json?    @map("old_value")
   newValue  Json?    @map("new_value")
-  ipAddress String?  @map("ip_address") @db.VarChar(45)
-  userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
   user      User?    @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
 }
 
-model expenses_images {
-  id                                       String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  created_by                               String?           @db.Uuid
-  approved_by                              String?           @db.Uuid
-  expenses_id                              String?           @db.Uuid
-  name                                     String?           @db.VarChar(50)
-  description                              String?
+model Expenses_images {
+  id                                       String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_by                               String?         @db.Uuid
+  approved_by                              String?         @db.Uuid
+  expenses_id                              String?         @db.Uuid
   status                                   ApprovalStatus?
-  type                                     ExpenseImageType?
-  attachment_url                           String?           @db.VarChar(255)
-  created_at                               DateTime          @default(now())
-  updated_at                               DateTime
+  attachment_url                           String?         @db.VarChar(255)
+  created_at                               DateTime        @default(now())
+  updatedAt                                DateTime        @updatedAt @map("updated_at")
   deleted_at                               DateTime?
-  users_expenses_images_approved_byTousers User?             @relation("expenses_images_approved_byTousers", fields: [approved_by], references: [id])
-  users_expenses_images_created_byTousers  User?             @relation("expenses_images_created_byTousers", fields: [created_by], references: [id])
-  expenses                                 Expense?          @relation(fields: [expenses_id], references: [id])
+  users_expenses_images_approved_byTousers User?           @relation("expenses_images_approved_byTousers", fields: [approved_by], references: [id])
+  users_expenses_images_created_byTousers  User?           @relation("expenses_images_created_byTousers", fields: [created_by], references: [id])
+  expenses                                 Expense?        @relation(fields: [expenses_id], references: [id])
+
+  @@index([expenses_id])
 }
 
-model income {
+model Income {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   created_by      String?        @db.Uuid
   income_code     String         @unique @db.VarChar(100)
@@ -210,16 +220,22 @@ model income {
   status          ApprovalStatus @default(pending)
   approved_at     DateTime?
   rejected_reason String?
+  periodMonth     Int?           @map("period_month")
+  periodYear      Int?           @map("period_year")
   created_at      DateTime       @default(now())
-  updated_at      DateTime
+  updatedAt       DateTime       @updatedAt @map("updated_at")
   deleted_at      DateTime?
-  users           User?          @relation(fields: [created_by], references: [id])
+  approved_by     String?        @db.Uuid
+  approvedByUser  User?          @relation("income_approved_byTousers", fields: [approved_by], references: [id])
+  users           User?          @relation("income_created_byTousers", fields: [created_by], references: [id])
 
+  @@index([created_by])
+  @@index([periodYear, periodMonth])
   @@index([income_date])
   @@index([status])
 }
 
-model reports {
+model Reports {
   id                               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   created_by                       String?      @db.Uuid
   approved_by                      String?      @db.Uuid
@@ -227,17 +243,20 @@ model reports {
   period_month                     Int
   period_year                      Int
   status                           ReportStatus @default(open)
+  rejected_reason                  String?      @db.Text
   opening_balance                  Decimal      @default(0) @db.Decimal(15, 2)
   total_income                     Decimal      @default(0) @db.Decimal(15, 2)
   total_expense                    Decimal      @default(0) @db.Decimal(15, 2)
   closing_balance                  Decimal      @default(0) @db.Decimal(15, 2)
   last_calculated_at               DateTime?
   created_at                       DateTime     @default(now())
-  updated_at                       DateTime
+  updatedAt                        DateTime     @updatedAt @map("updated_at")
+  deleted_at                       DateTime?
   users_reports_approved_byTousers User?        @relation("reports_approved_byTousers", fields: [approved_by], references: [id])
   users_reports_created_byTousers  User?        @relation("reports_created_byTousers", fields: [created_by], references: [id])
 
   @@unique([period_month, period_year])
+  @@index([status])
   @@index([period_year, period_month])
 }
 
@@ -257,13 +276,7 @@ enum BillStatus {
 
 enum BillingPeriod {
   monthly
-  weekly
   once
-}
-
-enum ExpenseImageType {
-  documentation
-  prooving
 }
 
 enum MailerLogType {
@@ -275,6 +288,8 @@ enum MailerLogType {
   expense_rejected
   reminder
   system
+  registration
+  activation
 }
 
 enum MailerReferenceType {
@@ -282,6 +297,7 @@ enum MailerReferenceType {
   payment
   expense
   system
+  user
 }
 
 enum MailerStatus {
