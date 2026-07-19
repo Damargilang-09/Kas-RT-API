@@ -201,7 +201,7 @@ export class PaymentServices {
         users_payments_approved_byTousers: {
           select: { name: true },
         },
-        user: { select: { name: true } },
+        user: { select: { name: true,houseNumber : true } },
         bill: { select: { feeType: { select: { name: true } } } },
       },
     });
@@ -233,6 +233,7 @@ export class PaymentServices {
       status: findPayment.status,
       approvedBy: findPayment.users_payments_approved_byTousers?.name,
       userName: findPayment.user.name,
+      houseNumber: findPayment.user.houseNumber,
       rejectedReason: findPayment.paymentMethod,
       feeTypeName: findPayment.bill.feeType.name,
     };

@@ -94,6 +94,7 @@ export class IncomeService {
       prisma.income.findMany({
         where,
         skip,
+        take,
         orderBy: { created_at: "desc" },
         include: {
           users: { select: { name: true } },

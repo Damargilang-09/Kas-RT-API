@@ -8,6 +8,12 @@ export class ReportsValidation {
 
       limit: z.coerce.number().int().min(1).max(100).default(10),
 
+      search: z.preprocess(
+              (val) => (val === "" ? undefined : val),
+              z.string().trim().optional(),
+            ),
+      
+
       status: z.preprocess(
         (val) => (val === "" ? undefined : val),
         z

@@ -193,6 +193,27 @@ export class ReportsServices {
       where.period_year = query.year;
     }
 
+    if (query.search) {
+      where.OR = [
+        {
+          users_reports_created_byTousers: {
+            name: {
+              contains: query.search,
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          users_reports_approved_byTousers: {
+            name: {
+              contains: query.search,
+              mode: "insensitive",
+            },
+          },
+        },
+      ];
+    }
+
     const [reports, totalReports] = await Promise.all([
       prisma.reports.findMany({
         where,
@@ -202,6 +223,7 @@ export class ReportsServices {
           created_at: "desc",
         },
         include: {
+
           users_reports_created_byTousers: {
             select: {
               name: true,

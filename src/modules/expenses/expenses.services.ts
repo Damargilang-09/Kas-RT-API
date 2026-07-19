@@ -116,6 +116,7 @@ export class ExpensesService {
       where.periodMonth = query.month;
     }
 
+
     if (query.search) {
       where.OR = [
         {
