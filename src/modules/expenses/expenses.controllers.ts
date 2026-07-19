@@ -3,7 +3,7 @@ import { validate } from "../../validations/validation";
 import { ExpensesValidation } from "./expenses.validation";
 import { ExpensesService } from "./expenses.services";
 import { StatusCodes } from "http-status-codes";
-import { QueryValidation } from "../../validation/queryValidation";
+import { QueryValidation } from "../../validations/queryValidation";
 
 export class ExpensesController {
   static async create(req: Request, res: Response) {
@@ -64,7 +64,10 @@ export class ExpensesController {
       body: req.body,
     });
 
-    const formattedExpenses = await ExpensesService.approve({ params, body },payload);
+    const formattedExpenses = await ExpensesService.approve(
+      { params, body },
+      payload,
+    );
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -74,12 +77,12 @@ export class ExpensesController {
   }
 
   static async delete(req: Request, res: Response) {
-    const payload = res.locals?.payload
+    const payload = res.locals?.payload;
     const { params } = validate(ExpensesValidation.EXPENSES_DETAIL, {
       params: req.params,
     });
 
-    await ExpensesService.delete({ params },payload);
+    await ExpensesService.delete({ params }, payload);
 
     res.status(StatusCodes.OK).json({
       success: true,

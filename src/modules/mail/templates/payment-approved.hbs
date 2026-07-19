@@ -1,0 +1,356 @@
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pembayaran Dikonfirmasi - RTKU</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #f8fafc;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #191b23;
+    "
+  >
+    <table
+      role="presentation"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      width="100%"
+      style="background-color: #f8fafc; padding: 40px 16px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="600"
+            style="
+              width: 100%;
+              max-width: 600px;
+              background-color: #ffffff;
+              border-radius: 14px;
+              overflow: hidden;
+              border: 1px solid #e2e8f0;
+            "
+          >
+            <!-- Header -->
+            <tr>
+              <td
+                align="center"
+                style="
+                  background-color: #ffffff;
+                  padding: 28px 24px;
+                  border-bottom: 1px solid #e2e8f0;
+                "
+              >
+                <div
+                  style="
+                    margin: 0;
+                    color: #003d9b;
+                    font-size: 26px;
+                    line-height: 32px;
+                    font-weight: 800;
+                    letter-spacing: -0.02em;
+                  "
+                >
+                  RTKU
+                </div>
+              </td>
+            </tr>
+
+            <!-- Hero / Intro -->
+            <tr>
+              <td
+                style="
+                  background-color: #eefdf3;
+                  padding: 36px 32px 32px;
+                  text-align: center;
+                "
+              >
+                <div
+                  style="
+                    display: inline-block;
+                    background-color: #d1fadf;
+                    color: #027a48;
+                    border-radius: 999px;
+                    padding: 8px 14px;
+                    font-size: 12px;
+                    line-height: 16px;
+                    font-weight: 700;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                  "
+                >
+                  Pembayaran Disetujui
+                </div>
+
+                <h1
+                  style="
+                    margin: 18px 0 0;
+                    color: #111827;
+                    font-size: 28px;
+                    line-height: 36px;
+                    font-weight: 800;
+                    letter-spacing: -0.02em;
+                  "
+                >
+                  Pembayaran Anda Berhasil Dikonfirmasi
+                </h1>
+
+                <p
+                  style="
+                    margin: 12px 0 0;
+                    color: #434654;
+                    font-size: 15px;
+                    line-height: 24px;
+                  "
+                >
+                  Bendahara telah memverifikasi bukti pembayaran Anda dan
+                  tagihan ini kini berstatus lunas.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td style="padding: 36px 32px">
+                <p
+                  style="
+                    margin: 0 0 18px;
+                    color: #191b23;
+                    font-size: 16px;
+                    line-height: 24px;
+                  "
+                >
+                  Halo
+                  <strong style="color: #003d9b">{{name}}</strong>,
+                </p>
+
+                <p
+                  style="
+                    margin: 0 0 24px;
+                    color: #434654;
+                    font-size: 15px;
+                    line-height: 24px;
+                  "
+                >
+                  Terima kasih, pembayaran iuran Anda sudah kami terima dan
+                  disetujui. Berikut rincian pembayarannya.
+                </p>
+
+                <!-- Detail Box -->
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                  style="
+                    background-color: #f9fafb;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 10px;
+                    margin: 0 0 24px;
+                  "
+                >
+                  <tr>
+                    <td style="padding: 20px 24px">
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;"
+                      >
+                        <tr>
+                          <td
+                            width="140"
+                            style="
+                              width: 140px;
+                              color: #6b7280;
+                              font-size: 14px;
+                              line-height: 20px;
+                            "
+                          >
+                            Jenis Iuran
+                          </td>
+                          <td
+                            style="
+                              color: #111827;
+                              font-size: 15px;
+                              font-weight: 700;
+                              line-height: 20px;
+                            "
+                          >
+                            {{feeTypeName}}
+                          </td>
+                        </tr>
+                      </table>
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;"
+                      >
+                        <tr>
+                          <td
+                            width="140"
+                            style="
+                              width: 140px;
+                              color: #6b7280;
+                              font-size: 14px;
+                              line-height: 20px;
+                            "
+                          >
+                            Kode Tagihan
+                          </td>
+                          <td
+                            style="
+                              color: #111827;
+                              font-size: 15px;
+                              font-weight: 700;
+                              line-height: 20px;
+                            "
+                          >
+                            {{billCode}}
+                          </td>
+                        </tr>
+                      </table>
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;"
+                      >
+                        <tr>
+                          <td
+                            width="140"
+                            style="
+                              width: 140px;
+                              color: #6b7280;
+                              font-size: 14px;
+                              line-height: 20px;
+                            "
+                          >
+                            Nominal
+                          </td>
+                          <td
+                            style="
+                              color: #111827;
+                              font-size: 15px;
+                              font-weight: 700;
+                              line-height: 20px;
+                            "
+                          >
+                            Rp{{amount}}
+                          </td>
+                        </tr>
+                      </table>
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="padding-top: 12px;"
+                      >
+                        <tr>
+                          <td
+                            width="140"
+                            style="
+                              width: 140px;
+                              color: #6b7280;
+                              font-size: 14px;
+                              line-height: 20px;
+                            "
+                          >
+                            Tanggal Konfirmasi
+                          </td>
+                          <td
+                            style="
+                              color: #111827;
+                              font-size: 15px;
+                              font-weight: 700;
+                              line-height: 20px;
+                            "
+                          >
+                            {{paidAt}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <hr
+                  style="
+                    border: none;
+                    border-top: 1px solid #e5e7eb;
+                    margin: 0 0 20px;
+                  "
+                />
+
+                <p
+                  style="
+                    margin: 0;
+                    color: #6b7280;
+                    font-size: 14px;
+                    line-height: 22px;
+                  "
+                >
+                  Ini adalah pemberitahuan otomatis dari sistem. Anda tidak
+                  perlu membalas email ini.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td
+                align="center"
+                style="
+                  padding: 26px 24px;
+                  background-color: #f9fafb;
+                  border-top: 1px solid #e5e7eb;
+                "
+              >
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    color: #434654;
+                    font-size: 14px;
+                    line-height: 20px;
+                    font-weight: 700;
+                  "
+                >
+                  Sistem Aplikasi - RTKU
+                </p>
+
+                <p
+                  style="
+                    margin: 0;
+                    color: #9ca3af;
+                    font-size: 12px;
+                    line-height: 18px;
+                  "
+                >
+                  Email ini dikirim secara otomatis oleh sistem. Mohon tidak
+                  membalas email ini secara langsung.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

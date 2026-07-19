@@ -139,7 +139,55 @@ export class MailService {
     return content;
   }
 
-  static async sendBillFromLog(input: {
+  // ---------------------------------------------------------------------
+  // Payment approved / rejected
+  // ---------------------------------------------------------------------
+  static buildPaymentApprovedContent(input: {
+    name: string;
+    billCode: string;
+    feeTypeName: string;
+    amount: string | number;
+    paidAt: Date | string;
+  }) {
+    const subject = `Pembayaran Dikonfirmasi - ${input.billCode}`;
+
+    const htmlTemplate = TemplateUtil.compile("payment-approved", {
+      name: input.name,
+      billCode: input.billCode,
+      feeTypeName: input.feeTypeName,
+      amount: input.amount,
+      paidAt: input.paidAt,
+    });
+
+    return { subject, htmlTemplate };
+  }
+
+  static buildPaymentRejectedContent(input: {
+    name: string;
+    billCode: string;
+    feeTypeName: string;
+    amount: string | number;
+    rejectedReason: string;
+  }) {
+    const subject = `Pembayaran Ditolak - ${input.billCode}`;
+
+    const htmlTemplate = TemplateUtil.compile("payment-rejected", {
+      name: input.name,
+      billCode: input.billCode,
+      feeTypeName: input.feeTypeName,
+      amount: input.amount,
+      rejectedReason: input.rejectedReason,
+    });
+
+    return { subject, htmlTemplate };
+  }
+
+  // ---------------------------------------------------------------------
+  // Generic sender: kirim email dari sebuah mailerLog yang sudah dibuat
+  // (status pending), lalu update status jadi sent/failed. Dipakai lintas
+  // modul (bill, payment, dll) supaya tidak duplikasi logic kirim + update.
+  // ---------------------------------------------------------------------
+  static async sendFromLog(input: {
     mailerLogId: string;
     to: string;
     subject: string;
@@ -152,7 +200,7 @@ export class MailService {
         html: input.html,
       });
 
-      const Updatelog = await prisma.mailerLog.update({
+      const updateLog = await prisma.mailerLog.update({
         where: { id: input.mailerLogId },
         data: {
           status: MailerStatus.sent,
@@ -161,7 +209,7 @@ export class MailService {
         },
       });
 
-      return Updatelog;
+      return updateLog;
     } catch (error) {
       const err = error as Error;
 
@@ -172,5 +220,16 @@ export class MailService {
 
       return updateLog;
     }
+  }
+
+  // Dipertahankan supaya bill.service.ts yang sudah ada tetap jalan tanpa
+  // perubahan; secara internal cuma mendelegasikan ke sendFromLog.
+  static async sendBillFromLog(input: {
+    mailerLogId: string;
+    to: string;
+    subject: string;
+    html: string;
+  }) {
+    return MailService.sendFromLog(input);
   }
 }

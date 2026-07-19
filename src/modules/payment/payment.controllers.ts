@@ -4,7 +4,7 @@ import { validate } from "../../validations/validation";
 import { StatusCodes } from "http-status-codes";
 import { PaymentServices } from "./payment.services";
 import { ResponseError } from "../../utils/response-error.util";
-import { QueryValidation } from "../../validation/queryValidation";
+import { QueryValidation } from "../../validations/queryValidation";
 
 export class PaymentController {
   static async create(req: Request, res: Response) {
@@ -49,12 +49,12 @@ export class PaymentController {
     });
   }
   static async getById(req: Request, res: Response) {
-    const payload = res.locals?.payload
+    const payload = res.locals?.payload;
     const { params } = validate(PaymentValidation.PAYMENT_DETAIL, {
       params: req.params,
     });
 
-    const findPayment = await PaymentServices.getById({ params },payload);
+    const findPayment = await PaymentServices.getById({ params }, payload);
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -102,11 +102,11 @@ export class PaymentController {
   }
 
   static async delete(req: Request, res: Response) {
-    const payload = res.locals?.payload
+    const payload = res.locals?.payload;
     const { params } = validate(PaymentValidation.PAYMENT_DETAIL, {
       params: req.params,
     });
-    await PaymentServices.delete({ params },payload);
+    await PaymentServices.delete({ params }, payload);
     res.status(StatusCodes.OK).json({
       success: true,
       message: "Anda berhasil menghapus histori pembayaran",

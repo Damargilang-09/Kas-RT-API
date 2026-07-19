@@ -6,14 +6,15 @@ import {
 } from "./payment.validations";
 import { ResponseError } from "../../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
-import { BillStatus, Prisma } from "../../../generated/prisma";
+import { BillStatus, MailerLogType, MailerReferenceType, MailerStatus, Prisma } from "../../../generated/prisma";
 import { CloudinaryUtil } from "../../utils/cloudinary.utils";
 import {
   AllListQueryInput,
   userPayload,
-} from "../../validation/queryValidation";
+} from "../../validations/queryValidation";
 import { AuditLogUtil } from "../../utils/auditLog.utils";
 import { isDueDatePassed } from "../bill/bill.helper";
+import { MailService } from "../mail/mail.service";
 
 export class PaymentServices {
   static async create(
@@ -283,57 +284,66 @@ export class PaymentServices {
     };
   }
 
-  static async approve(
+ static async approve(
     { params, body }: PaymentApprovalInput,
     payload: userPayload,
   ) {
     const findPayment = await prisma.payment.findFirst({
       where: { id: params.id, deleted_at: null },
       include: {
+        user: { select: { id: true, name: true, email: true } },
         bill: {
-          select: { periodMonth: true, periodYear: true, dueDate: true },
+          select: {
+            billCode: true,
+            periodMonth: true,
+            periodYear: true,
+            dueDate: true,
+            feeType: { select: { name: true } },
+          },
         },
       },
     });
-
+ 
     if (!findPayment)
       throw new ResponseError(
         StatusCodes.NOT_FOUND,
         "Tagihan tidak di temukan !",
       );
-
+ 
     if (findPayment.status !== "pending")
       throw new ResponseError(
         StatusCodes.NOT_FOUND,
         "Pembayaran ini sudah diproses sebelumnya dan tidak dapat diubah kembali!",
       );
-
-    const result = await prisma.$transaction(async (tx) => {
+ 
+    const isApproved = body.status === "approved";
+ 
+    const { result, mailerLog } = await prisma.$transaction(async (tx) => {
       const updatedPayment = await tx.payment.update({
         where: { id: findPayment.id, deleted_at: null },
         data: {
           status: body.status,
           approved_by: payload.id,
-          rejectedReason:
-            body.status === "rejected" ? (body.rejectedReason ?? null) : null,
+          rejectedReason: isApproved ? null : (body.rejectedReason ?? null),
         },
       });
+ 
       const rejectedBillStatus = isDueDatePassed(findPayment.bill.dueDate)
         ? BillStatus.overdue
         : BillStatus.unpaid;
-
+ 
       await tx.bill.update({
         where: {
           id: findPayment.billId,
           status: BillStatus.pending,
         },
         data: {
-          status:
-            body.status === "rejected" ? rejectedBillStatus : BillStatus.paid,
-          paidAt: body.status === "approved" ? new Date() : null,
+          status: isApproved ? BillStatus.paid : rejectedBillStatus,
+          paidAt: isApproved ? new Date() : null,
         },
       });
-      if (body.status === "approved")
+ 
+      if (isApproved) {
         await tx.cashTransaction.create({
           data: {
             amount: findPayment.amount,
@@ -344,7 +354,41 @@ export class PaymentServices {
             periodYear: findPayment.bill.periodYear,
           },
         });
-      return updatedPayment;
+      }
+ 
+      const mailContent = isApproved
+        ? MailService.buildPaymentApprovedContent({
+            name: findPayment.user.name,
+            billCode: findPayment.bill.billCode,
+            feeTypeName: findPayment.bill.feeType.name,
+            amount: String(findPayment.amount),
+            paidAt: new Date(),
+          })
+        : MailService.buildPaymentRejectedContent({
+            name: findPayment.user.name,
+            billCode: findPayment.bill.billCode,
+            feeTypeName: findPayment.bill.feeType.name,
+            amount: String(findPayment.amount),
+            rejectedReason: body.rejectedReason ?? "-",
+          });
+ 
+      const createdMailerLog = await tx.mailerLog.create({
+        data: {
+          userId: findPayment.user.id,
+          emailTo: findPayment.user.email,
+          subject: mailContent.subject,
+          body: mailContent.htmlTemplate,
+          type: isApproved
+            ? MailerLogType.payment_success
+            : MailerLogType.payment_failed,
+          referenceType: MailerReferenceType.payment,
+          referenceId: findPayment.id,
+          status: MailerStatus.pending,
+        },
+        select: { id: true, emailTo: true, subject: true, body: true },
+      });
+ 
+      return { result: updatedPayment, mailerLog: createdMailerLog };
     });
 
     await AuditLogUtil.record({

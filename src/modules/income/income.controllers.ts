@@ -3,7 +3,7 @@ import { IncomeValidation } from "./income.validation";
 import { validate } from "../../validations/validation";
 import { IncomeService } from "./income.services";
 import { StatusCodes } from "http-status-codes";
-import { QueryValidation } from "../../validation/queryValidation";
+import { QueryValidation } from "../../validations/queryValidation";
 
 export class IncomeController {
   static async create(req: Request, res: Response) {
@@ -12,7 +12,7 @@ export class IncomeController {
       body: req.body,
     });
 
-    const formattedIncome = await IncomeService.create({ body },payload);
+    const formattedIncome = await IncomeService.create({ body }, payload);
 
     res.status(StatusCodes.CREATED).json({
       success: true,
@@ -48,13 +48,16 @@ export class IncomeController {
     });
   }
   static async approve(req: Request, res: Response) {
-    const payload = res.locals?.payload
+    const payload = res.locals?.payload;
     const { params, body } = validate(IncomeValidation.APPROVAL_INCOME, {
       params: req.params,
       body: req.body,
     });
 
-    const formattedIncome = await IncomeService.approve({ params, body },payload);
+    const formattedIncome = await IncomeService.approve(
+      { params, body },
+      payload,
+    );
 
     res.status(StatusCodes.OK).json({
       succes: true,
@@ -63,12 +66,12 @@ export class IncomeController {
     });
   }
   static async delete(req: Request, res: Response) {
-    const payload = res.locals?.payload
+    const payload = res.locals?.payload;
     const { params } = validate(IncomeValidation.GET_DETAIL_INCOME, {
       params: req.params,
     });
 
-    await IncomeService.delete({ params },payload);
+    await IncomeService.delete({ params }, payload);
 
     res.status(StatusCodes.OK).json({
       success: true,

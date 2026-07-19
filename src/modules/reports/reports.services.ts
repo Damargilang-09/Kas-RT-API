@@ -9,7 +9,7 @@ import {
   ReportQueryInput,
 } from "./reports.validation";
 import { Prisma } from "../../../generated/prisma";
-import { userPayload } from "../../validation/queryValidation";
+import { userPayload } from "../../validations/queryValidation";
 import { AuditLogUtil } from "../../utils/auditLog.utils";
 
 export class ReportsServices {
@@ -218,7 +218,6 @@ export class ReportsServices {
 
       prisma.reports.count({ where }),
     ]);
-   
 
     return {
       reports,

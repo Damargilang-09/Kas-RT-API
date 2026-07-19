@@ -9,7 +9,7 @@ import {
 import {
   AllListQueryInput,
   userPayload,
-} from "../../validation/queryValidation";
+} from "../../validations/queryValidation";
 import { Prisma } from "../../../generated/prisma";
 import { AuditLogUtil } from "../../utils/auditLog.utils";
 
@@ -147,7 +147,10 @@ export class IncomeService {
 
     return safeIncome;
   }
-  static async approve({ params, body }: ApprovalIncomeInput,payload:userPayload) {
+  static async approve(
+    { params, body }: ApprovalIncomeInput,
+    payload: userPayload,
+  ) {
     const findIncome = await prisma.income.findFirst({
       where: { id: params.id, deleted_at: null },
     });
@@ -168,7 +171,7 @@ export class IncomeService {
       const approveIncome = await tx.income.update({
         where: { id: findIncome.id },
         data: {
-          approved_by:payload.id,
+          approved_by: payload.id,
           rejected_reason:
             body.status === "rejected" ? (body.rejected_reason ?? null) : null,
           approved_at: body.status === "approved" ? new Date() : null,
@@ -206,7 +209,7 @@ export class IncomeService {
 
     return formattedIncome;
   }
-  static async delete({ params }: DetailIncomeInput,payload:userPayload) {
+  static async delete({ params }: DetailIncomeInput, payload: userPayload) {
     const findIncome = await prisma.income.findFirst({
       where: { id: params.id, deleted_at: null },
     });

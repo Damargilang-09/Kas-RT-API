@@ -9,7 +9,7 @@ import {
 import {
   AllListQueryInput,
   userPayload,
-} from "../../validation/queryValidation";
+} from "../../validations/queryValidation";
 import { Prisma } from "../../../generated/prisma";
 import { CloudinaryUtil } from "../../utils/cloudinary.utils";
 import { AuditLogUtil } from "../../utils/auditLog.utils";
@@ -142,9 +142,9 @@ export class ExpensesService {
         include: {
           approvedBy: { select: { name: true } },
           requestedBy: { select: { name: true } },
-          expenses_images:{
-          select: {id:true, attachment_url: true },
-        },
+          expenses_images: {
+            select: { id: true, attachment_url: true },
+          },
         },
       }),
       prisma.expense.count({ where }),
@@ -205,7 +205,7 @@ export class ExpensesService {
       approvedAt: findExpenses.approvedAt,
       rejectedReason: findExpenses.rejectedReason,
       status: findExpenses.status,
-      expenses_images: findExpenses.expenses_images,
+      expenses_image: findExpenses.expenses_images,
       approvedBy: findExpenses.approvedBy?.name,
       requestedBy: findExpenses.requestedBy?.name,
     };
