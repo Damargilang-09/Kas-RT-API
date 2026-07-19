@@ -25,6 +25,7 @@ import type {
   CancelBatchBillInput,
   GenerateBillInput,
   MyBillDetailInput,
+  MyBillListQueryInput,
 } from "./bill.validation";
 
 export class BillService {
@@ -264,33 +265,71 @@ export class BillService {
       where.periodYear = query.periodYear;
     }
 
-    const bills = await prisma.bill.findMany({
-      where,
-      skip,
-      take,
-      select: billSelect,
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    if (query.search) {
+      where.OR = [
+        {
+          billCode: {
+            contains: query.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          batchId: {
+            contains: query.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          user: {
+            name: {
+              contains: query.search,
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          user: {
+            houseNumber: {
+              contains: query.search,
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          feeType: {
+            name: {
+              contains: query.search,
+              mode: "insensitive",
+            },
+          },
+        },
+      ];
+    }
 
-    const totalData = await prisma.bill.count({
-      where,
-    });
+    const [bills, totalData] = await Promise.all([
+      prisma.bill.findMany({
+        where,
+        skip,
+        take,
+        select: billSelect,
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.bill.count({
+        where,
+      }),
+    ]);
 
-    const totalPage = Math.ceil(totalData / take);
-
-    const result = {
+    return {
       bills,
       meta: {
         page: query.page,
         limit: take,
         totalData,
-        totalPage,
+        totalPage: Math.max(1, Math.ceil(totalData / take)),
       },
     };
-
-    return result;
   }
 
   // Function ini untuk ambil detail tagihan.
@@ -410,16 +449,81 @@ export class BillService {
   }
 
   // Function untuk lihat my-bills
-  static async getMyBills(payload: BillPayload) {
-    const getMyBills = await prisma.bill.findMany({
-      where: {
-        userId: payload.id,
-        deleted_at: null,
+  static async getMyBills({
+    payload,
+    query,
+  }: {
+    payload: BillPayload;
+    query: MyBillListQueryInput["query"];
+  }) {
+    const skip = (query.page - 1) * query.limit;
+    const take = query.limit;
+
+  
+    const usePagination = query.status !== undefined;
+
+    const where: Prisma.BillWhereInput = {
+      userId: payload.id,
+      deleted_at: null,
+      status: { not: BillStatus.paid },
+    };
+
+    // Tab "Semua" di tagihan saya
+    if (query.status === "all" || query.status === "active") {
+      where.status = {
+        in: [BillStatus.unpaid, BillStatus.overdue],
+      };
+    }
+
+    if (query.status === "pending") {
+      where.status = BillStatus.pending;
+    }
+
+    const summaryWhere: Prisma.BillWhereInput = {
+      userId: payload.id,
+      deleted_at: null,
+    };
+
+    const [bills, totalData, activeSummary, pendingCount] = await Promise.all([
+      prisma.bill.findMany({
+        where,
+        ...(usePagination ? { skip, take } : {}),
+        select: billSelect,
+        orderBy: { dueDate: "desc" },
+      }),
+      prisma.bill.count({ where }),
+      prisma.bill.aggregate({
+        where: {
+          ...summaryWhere,
+          status: { in: [BillStatus.unpaid, BillStatus.overdue] },
+        },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      prisma.bill.count({
+        where: {
+          ...summaryWhere,
+          status: BillStatus.pending,
+        },
+      }),
+    ]);
+
+    return {
+      bills,
+      meta: {
+        page: usePagination ? query.page : 1,
+        limit: usePagination ? take : totalData,
+        totalData,
+        totalPage: usePagination
+          ? Math.max(1, Math.ceil(totalData / take))
+          : 1,
       },
-      select: billSelect,
-      orderBy: { dueDate: "desc" },
-    });
-    return getMyBills;
+      summary: {
+        totalDue: Number(activeSummary._sum.amount ?? 0),
+        activeCount: activeSummary._count.id,
+        pendingCount,
+      },
+    };
   }
 
   static async getMyBillDetail({

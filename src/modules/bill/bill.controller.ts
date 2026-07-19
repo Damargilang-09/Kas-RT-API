@@ -76,14 +76,23 @@ export class BillController {
     });
   }
 
-  static async getMyBills(_req: Request, res: Response) {
+  static async getMyBills(req: Request, res: Response) {
+    const { query } = validate(BillValidation.MY_BILLS_QUERY, {
+      query: req.query,
+    });
+
     const payload = res.locals?.payload;
-    const getMyBills = await BillService.getMyBills(payload);
+    const { bills, meta, summary } = await BillService.getMyBills({
+      payload,
+      query,
+    });
 
     res.status(StatusCodes.OK).json({
       success: true,
       message: "List Tagihan Berhasil Diterima",
-      data: getMyBills,
+      data: bills,
+      meta,
+      summary,
     });
   }
 

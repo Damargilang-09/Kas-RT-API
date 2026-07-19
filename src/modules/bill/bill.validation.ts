@@ -20,6 +20,18 @@ export class BillValidation {
       batchId: zod.string().optional(),
       periodMonth: zod.coerce.number().int().min(1).max(12).optional(),
       periodYear: zod.coerce.number().int().min(2000).optional(),
+      search: zod.preprocess(
+        (value) => (value === "" ? undefined : value),
+        zod.string().trim().optional(),
+      ),
+    }),
+  });
+
+  static readonly MY_BILLS_QUERY = zod.object({
+    query: zod.object({
+      page: zod.coerce.number().int().min(1).default(1),
+      limit: zod.coerce.number().int().min(1).max(50).default(10),
+      status: zod.enum(["all", "active", "pending"]).optional(),
     }),
   });
 
@@ -40,6 +52,9 @@ export class BillValidation {
 
 export type GenerateBillInput = zod.infer<typeof BillValidation.GENERATE>;
 export type BillListQueryInput = zod.infer<typeof BillValidation.LIST_QUERY>;
+export type MyBillListQueryInput = zod.infer<
+  typeof BillValidation.MY_BILLS_QUERY
+>;
 export type BillDetailInput = zod.infer<typeof BillValidation.DETAIL>;
 export type CancelBatchBillInput = zod.infer<
   typeof BillValidation.CANCEL_BATCH
