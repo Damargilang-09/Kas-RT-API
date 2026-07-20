@@ -139,9 +139,9 @@ export class MailService {
     return content;
   }
 
-  // ---------------------------------------------------------------------
+  // -
   // Payment approved / rejected
-  // ---------------------------------------------------------------------
+ 
   static buildPaymentApprovedContent(input: {
     name: string;
     billCode: string;

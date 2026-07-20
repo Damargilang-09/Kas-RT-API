@@ -41,4 +41,3 @@ export type AuthRegisterRequest = zod.infer<
 
 export type AuthLoginRequest = zod.infer<typeof AuthValidation.LOGIN_USER>;
 
-// kenapa gaada input role dan status, karna memang register user gabisa pilih. hardcode aja nanti

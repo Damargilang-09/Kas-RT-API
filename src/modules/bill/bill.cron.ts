@@ -1,11 +1,12 @@
+import cron from "node-cron";
 import { BillStatus } from "../../../generated/prisma";
 import { prisma } from "../../configs/prisma-client.config";
-import {
-  getJakartaDateParts,
-  getJakartaStartOfToday,
-} from "./bill.helper";
+import { getJakartaStartOfToday } from "./bill.helper";
 
-let lastRunDate: string | null = null;
+const BILL_OVERDUE_CRON_SCHEDULE = "5 0 * * *";
+const JAKARTA_TIMEZONE = "Asia/Jakarta";
+
+let isUpdatingOverdueBills = false;
 
 export async function updateOverdueBills() {
   const today = getJakartaStartOfToday();
@@ -26,37 +27,45 @@ export async function updateOverdueBills() {
   return result.count;
 }
 
-async function runOverdueCron() {
-  const jakartaNow = getJakartaDateParts();
-  const currentDate = `${jakartaNow.year}-${jakartaNow.month}-${jakartaNow.day}`;
-
-  const isScheduledTime = jakartaNow.hour === 0 && jakartaNow.minute === 5;
-  const alreadyRunToday = lastRunDate === currentDate;
-
-  if (!isScheduledTime || alreadyRunToday) {
+async function runBillOverdueJob(trigger: "startup" | "scheduled") {
+  if (isUpdatingOverdueBills) {
+    console.log("[CRON] Pengecekan overdue masih berjalan, proses dilewati");
     return;
   }
 
-  lastRunDate = currentDate;
+  isUpdatingOverdueBills = true;
 
   try {
     const updatedCount = await updateOverdueBills();
+
     console.log(
-      `[CRON] ${updatedCount} tagihan diubah menjadi overdue pada ${currentDate}`,
+      `[CRON] ${updatedCount} tagihan diubah menjadi overdue (${trigger})`,
     );
   } catch (error) {
     console.error("[CRON] Gagal memperbarui status tagihan overdue", error);
+  } finally {
+    isUpdatingOverdueBills = false;
   }
 }
 
 export function startBillOverdueCron() {
-  // jalan sekali saat aplikasi aktif, biar tagihan yang terlewat tetap diperbarui.
-  void updateOverdueBills().catch((error) => {
-    console.error("[CRON] Gagal menjalankan pengecekan overdue awal", error);
-  });
+  // Dijalankan sekali ketika aplikasi menyala untuk mengejar jadwal yang terlewat.
+  void runBillOverdueJob("startup");
 
-  // Mengecek waktu setiap menit dan menjalankan proses pada 00.05 WIB.
-  return setInterval(() => {
-    void runOverdueCron();
-  }, 60_000);
+  // Dijalankan setiap hari pukul 00.05 WIB menggunakan node-cron.
+  const billOverdueTask = cron.schedule(
+    BILL_OVERDUE_CRON_SCHEDULE,
+    async () => {
+      await runBillOverdueJob("scheduled");
+    },
+    {
+      name: "bill-overdue-daily",
+      timezone: JAKARTA_TIMEZONE,
+      noOverlap: true,
+    },
+  );
+
+  console.log("[CRON] Bill overdue aktif setiap hari pukul 00.05 WIB");
+
+  return billOverdueTask;
 }

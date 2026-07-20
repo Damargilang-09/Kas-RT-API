@@ -1,9 +1,9 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
 import routes from "./routes";
 import { ErrorMiddleware } from "./middlewares/error.middleware";
-import { API_PREFIX, NODE_ENV, PORT, WHITE_LIST } from "./configs/env.config";
+import { API_PREFIX, NODE_ENV,  WHITE_LIST } from "./configs/env.config";
 import cors from "cors";
 import path from "path";
 import { startBillOverdueCron } from "./modules/bill/bill.cron";
@@ -39,7 +39,12 @@ app.use(`${API_PREFIX}/api`, routes);
 
 app.use(ErrorMiddleware);
 
-if (NODE_ENV === "development" || NODE_ENV === "production") {
+const isRunningOnVercel = process.env.VERCEL === "1";
+
+if (
+  (NODE_ENV === "development" || NODE_ENV === "production") &&
+  !isRunningOnVercel
+) {
   startBillOverdueCron();
 }
 

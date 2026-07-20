@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/RTku/api/cron/bills/overdue",
+      "schedule": "5 17 * * *"
+    }
+  ]
+}
