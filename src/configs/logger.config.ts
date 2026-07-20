@@ -46,40 +46,22 @@ export class LoggerConfig {
 
   private static build(): winston.Logger {
     const logger = winston.createLogger({
-      levels: customLevels.levels,
-      level: LoggerConfig.isProduction ? 'info' : 'debug',
-      format: LoggerConfig.fileFormat,
-      defaultMeta: { service: 'RTku-api' },
-      transports: [
-        new winston.transports.File({
-          filename: path.join('logs', 'error.log'),
-          level: 'error',
-        }),
-        new winston.transports.File({
-          filename: path.join('logs', 'combined.log'),
-        }),
-      ],
-      exceptionHandlers: [
-        new winston.transports.File({
-          filename: path.join('logs', 'exceptions.log'),
-        }),
-      ],
-      rejectionHandlers: [
-        new winston.transports.File({
-          filename: path.join('logs', 'rejections.log'),
-        }),
-      ],
-    });
+  levels: customLevels.levels,
+  level: LoggerConfig.isProduction ? 'info' : 'debug',
+  format: LoggerConfig.consoleFormat,
+  defaultMeta: { service: 'RTku-api' },
+  transports: [
+    new winston.transports.Console(),
+  ],
+  exceptionHandlers: [
+    new winston.transports.Console(),
+  ],
+  rejectionHandlers: [
+    new winston.transports.Console(),
+  ],
+});
 
-    if (!LoggerConfig.isProduction) {
-      logger.add(
-        new winston.transports.Console({
-          format: LoggerConfig.consoleFormat,
-        }),
-      );
-    }
-
-    return logger;
+return logger;
   }
 
   static getInstance(): winston.Logger {
