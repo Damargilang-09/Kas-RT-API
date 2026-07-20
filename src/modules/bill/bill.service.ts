@@ -44,7 +44,7 @@ export class BillService {
     return feeType;
   }
 
-  // Function GenerateBILL
+  
   static async generateBill({
     body,
     payload,
@@ -236,7 +236,7 @@ export class BillService {
     return { batchId, bills, auditLogId: auditLog.id };
   }
 
-  // Function GetBills
+  
   static async getBills({ query }: BillListQueryInput) {
     const skip = (query.page - 1) * query.limit;
     const take = query.limit;
@@ -332,7 +332,7 @@ export class BillService {
     };
   }
 
-  // Function ini untuk ambil detail tagihan.
+  
   static async getBillDetail({ params }: BillDetailInput) {
     const bill = await prisma.bill.findFirst({
       where: {
@@ -349,7 +349,7 @@ export class BillService {
     return bill;
   }
 
-  // Function untuk cancel Bill Batch
+  
 
   static async cancelBillBatch({
     body,
@@ -448,7 +448,7 @@ export class BillService {
     return response;
   }
 
-  // Function untuk lihat my-bills
+  
   static async getMyBills({
     payload,
     query,

@@ -3,6 +3,7 @@ import { AuthRoutes } from "../modules/auth/auth.route";
 import { UserRoutes } from "../modules/users/user.route";
 import { FeeRoutes } from "../modules/fee_type/fee.route";
 import { BillRoute, MyBillRoute } from "../modules/bill/bill.route";
+import { BillCronRoute } from "../modules/bill/bill.cron.route";
 import { SuperAdminRoutes } from "../modules/super_admin/super_admin.route";
 import paymentRoutes from "../modules/payment/payment.routes";
 import expensesRoutes from "../modules/expenses/expenses.routes";
@@ -20,6 +21,7 @@ router.use("/auth", AuthRoutes);
 router.use("/users", UserRoutes);
 router.use("/fee-types", FeeRoutes);
 router.use("/bills", BillRoute);
+router.use("/cron", BillCronRoute);
 router.use('/my-bills',MyBillRoute)
 router.use('/super-admin',SuperAdminRoutes)
 
