@@ -113,7 +113,11 @@ search dan lainnya sama kek di List.
     return user;
   }
 
-  static async updateUser({ params, body,payload }: UserUpdateInput & {payload : {id:string}}) {
+  static async updateUser({
+    params,
+    body,
+    payload,
+  }: UserUpdateInput & { payload: { id: string } }) {
     const existingUser = await prisma.user.findFirst({
       where: {
         id: params.id,
@@ -123,7 +127,7 @@ search dan lainnya sama kek di List.
     });
 
     if (!existingUser) {
-      throw new ResponseError(StatusCodes.NOT_FOUND, "User not found!");
+      throw new ResponseError(StatusCodes.NOT_FOUND, "User tidak ditemukan!");
     }
 
     if (body.role) {
@@ -131,7 +135,7 @@ search dan lainnya sama kek di List.
       if (statusAfterUpdate !== UserStatus.active) {
         throw new ResponseError(
           StatusCodes.BAD_REQUEST,
-          "User must be ACTIVE before role can be changed",
+          "User harus aktif terlebih dahulu agar role bisa diubah!",
         );
       }
     }

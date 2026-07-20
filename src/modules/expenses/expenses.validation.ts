@@ -1,7 +1,6 @@
 import * as z from "zod";
 import { ApprovalStatus } from "../../../generated/prisma";
 
-//kirim id lewat body sementara karna belum di integrasikan dengan auth
 export class ExpensesValidation {
   static readonly CREATE_EXPENSES = z.object({
     body: z.object({

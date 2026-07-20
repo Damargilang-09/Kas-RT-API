@@ -19,7 +19,7 @@ export class MulterMiddleware {
           file: Express.Multer.File,
           cb: (error: Error | null, destination: string) => void,
         ) {
-          const mainDir = path.join(process.cwd()); // root dir: /libray-api
+          const mainDir = path.join(process.cwd());
           cb(null, `${mainDir}/src/uploads`);
         },
         filename: function (
