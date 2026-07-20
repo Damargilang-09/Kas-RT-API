@@ -3,10 +3,11 @@ import "dotenv/config";
 import cookieParser from "cookie-parser";
 import routes from "./routes";
 import { ErrorMiddleware } from "./middlewares/error.middleware";
-import { API_PREFIX, NODE_ENV,  WHITE_LIST } from "./configs/env.config";
+import { API_PREFIX, NODE_ENV, PORT, WHITE_LIST } from "./configs/env.config";
 import cors from "cors";
 import path from "path";
 import { startBillOverdueCron } from "./modules/bill/bill.cron";
+import { MorganMiddleware } from "./middlewares/morgan.middleware";
 
 const app = express();
 
@@ -34,6 +35,8 @@ app.use(
   `${API_PREFIX}/src/uploads`,
   express.static(path.join(__dirname, "uploads")),
 );
+
+app.use(MorganMiddleware.handler());
 
 app.use(`${API_PREFIX}/api`, routes);
 
