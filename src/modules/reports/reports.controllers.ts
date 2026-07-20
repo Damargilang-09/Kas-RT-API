@@ -4,8 +4,6 @@ import { StatusCodes } from "http-status-codes";
 import { ReportsValidation } from "./reports.validation";
 import { validate } from "../../validations/validation";
 import { ResponseError } from "../../utils/response-error.util";
-import { file } from "zod";
-import { prisma } from "../../configs/prisma-client.config";
 export class ReportsController {
   static async dashboard(req: Request, res: Response) {
     const result = await ReportsServices.dashboard();

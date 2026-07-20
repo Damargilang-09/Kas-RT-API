@@ -182,11 +182,7 @@ export class MailService {
     return { subject, htmlTemplate };
   }
 
-  // ---------------------------------------------------------------------
-  // Generic sender: kirim email dari sebuah mailerLog yang sudah dibuat
-  // (status pending), lalu update status jadi sent/failed. Dipakai lintas
-  // modul (bill, payment, dll) supaya tidak duplikasi logic kirim + update.
-  // ---------------------------------------------------------------------
+  
   static async sendFromLog(input: {
     mailerLogId: string;
     to: string;
@@ -222,8 +218,6 @@ export class MailService {
     }
   }
 
-  // Dipertahankan supaya bill.service.ts yang sudah ada tetap jalan tanpa
-  // perubahan; secara internal cuma mendelegasikan ke sendFromLog.
   static async sendBillFromLog(input: {
     mailerLogId: string;
     to: string;

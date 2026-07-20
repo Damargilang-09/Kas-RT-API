@@ -51,7 +51,6 @@ export class IncomeService {
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { created_by, ...formattedIncome } = Income;
 
     return formattedIncome;
